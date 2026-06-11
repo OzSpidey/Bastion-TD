@@ -26,6 +26,15 @@ A production tower defense game built from the best ideas in the genre. One Java
 4. **3 commander abilities**, 8 permanent research perks, 10 achievements.
 5. Touch and mouse input, responsive layout, save data in localStorage.
 
+## Custom art
+
+The game ships with procedural vector art: rotating turrets with recoil and muzzle flash, animated enemies with unique silhouettes. To replace any of it with painted sprites, drop transparent PNGs at:
+
+1. `www/assets/towers/<id>.png` (top-down, facing right): gunner, cannon, frost, tesla, venom, sniper, missile, bank, beacon
+2. `www/assets/enemies/<id>.png` (top-down, facing up): runt, sprinter, swarmling, brute, winged, phantom, regenerator, shellback, splitter, juggernaut, wyvern
+
+The engine detects them at load time, no code changes needed. Towers render at 44px and enemies at about 2.7x their radius, so 128px or 256px source images are plenty.
+
 ## Repository layout
 
 ```
