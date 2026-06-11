@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0c1118">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Bastion TD</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- ============ MAIN MENU ============ -->
+  <div id="screen-menu" class="screen active">
+    <h1 class="title">BASTION <span class="accent">TD</span></h1>
+    <p class="subtitle">Hold the line. Build the maze. Break the horde.</p>
+    <div class="menu-grid">
+      <button class="menu-btn" data-mode="campaign">
+        <span class="mb-icon">🏰</span><span class="mb-name">Campaign</span>
+        <span class="mb-desc">5 maps, 3 difficulties, earn stars</span>
+      </button>
+      <button class="menu-btn" data-mode="endless">
+        <span class="mb-icon">♾️</span><span class="mb-name">Endless</span>
+        <span class="mb-desc">Survive as long as you can</span>
+      </button>
+      <button class="menu-btn" data-mode="maze">
+        <span class="mb-icon">🌀</span><span class="mb-name">Maze</span>
+        <span class="mb-desc">Open field, your towers ARE the maze</span>
+      </button>
+      <button class="menu-btn" data-mode="bossrush">
+        <span class="mb-icon">💀</span><span class="mb-name">Boss Rush</span>
+        <span class="mb-desc">15 waves, every wave has a boss</span>
+      </button>
+      <button class="menu-btn" data-mode="daily">
+        <span class="mb-icon">📅</span><span class="mb-name">Daily Challenge</span>
+        <span class="mb-desc">Seeded map + mutators, new every day</span>
+      </button>
+      <button class="menu-btn" data-mode="sandbox">
+        <span class="mb-icon">🧪</span><span class="mb-name">Sandbox</span>
+        <span class="mb-desc">Unlimited cash, experiment freely</span>
+      </button>
+    </div>
+    <div class="menu-row">
+      <button class="flat-btn" id="btn-research">🔬 Research <span id="menu-rp"></span></button>
+      <button class="flat-btn" id="btn-achievements">🏅 Achievements <span id="menu-ach"></span></button>
+      <button class="flat-btn" id="btn-help">❓ How to Play</button>
+    </div>
+    <p class="footnote" id="menu-stats"></p>
+  </div>
+
+  <!-- ============ MAP SELECT ============ -->
+  <div id="screen-maps" class="screen">
+    <div class="screen-head">
+      <button class="flat-btn back-btn" data-back>← Back</button>
+      <h2 id="maps-title">Select Map</h2>
+    </div>
+    <div id="daily-banner" class="hidden"></div>
+    <div id="maps-grid"></div>
+  </div>
+
+  <!-- ============ RESEARCH ============ -->
+  <div id="screen-research" class="screen">
+    <div class="screen-head">
+      <button class="flat-btn back-btn" data-back>← Back</button>
+      <h2>🔬 Research Lab</h2>
+      <span class="rp-badge" id="rp-balance"></span>
+    </div>
+    <p class="hint">Earn Research Points by clearing waves in any mode. Perks are permanent and apply to every match.</p>
+    <div id="perks-list"></div>
+  </div>
+
+  <!-- ============ ACHIEVEMENTS ============ -->
+  <div id="screen-ach" class="screen">
+    <div class="screen-head">
+      <button class="flat-btn back-btn" data-back>← Back</button>
+      <h2>🏅 Achievements</h2>
+    </div>
+    <div id="ach-grid"></div>
+  </div>
+
+  <!-- ============ HELP ============ -->
+  <div id="screen-help" class="screen">
+    <div class="screen-head">
+      <button class="flat-btn back-btn" data-back>← Back</button>
+      <h2>❓ How to Play</h2>
+    </div>
+    <div class="help-body">
+      <h3>Basics</h3>
+      <p>Enemies march from the spawn to the exit. Each leak costs lives. Build towers on open tiles, earn cash from kills, and survive every wave.</p>
+      <h3>Towers</h3>
+      <p>Every tower has <b>two upgrade paths</b> with three tiers each, and you can invest in both. Click a tower to upgrade, sell, or change its targeting priority (First / Last / Strong / Close).</p>
+      <h3>Enemy traits</h3>
+      <p><b>Flying</b> enemies are ignored by Cannons. <b>Stealth</b> enemies can only be targeted near a Beacon or by a Recon Sniper. <b>Armor</b> reduces every hit, so use Venom (ignores armor) or armor-piercing upgrades. Bosses arrive every 10th wave.</p>
+      <h3>Maze mode</h3>
+      <p>The field is open. Your towers physically block the path, so build long corridors to maximize damage. You cannot fully wall off the exit.</p>
+      <h3>Abilities</h3>
+      <p>Three commander abilities on cooldown: <b>Airstrike</b> (click target), <b>Frost Nova</b> (global slow) and <b>Overclock</b> (all towers fire 2x faster).</p>
+      <h3>Hotkeys</h3>
+      <p><kbd>1</kbd>–<kbd>9</kbd> pick tower · <kbd>Space</kbd> pause · <kbd>F</kbd> game speed · <kbd>N</kbd> send next wave · <kbd>U</kbd>/<kbd>I</kbd> upgrade selected · <kbd>T</kbd> targeting · <kbd>S</kbd> sell · <kbd>Esc</kbd> deselect</p>
+      <h3>Research</h3>
+      <p>Every cleared wave earns Research Points. Spend them in the Research Lab on permanent perks: more cash, more lives, stronger towers, interest income and faster abilities.</p>
+    </div>
+  </div>
+
+  <!-- ============ GAME ============ -->
+  <div id="screen-game" class="screen">
+    <div id="topbar">
+      <span class="stat" id="hud-lives">❤️ 20</span>
+      <span class="stat" id="hud-cash">💰 200</span>
+      <span class="stat" id="hud-wave">🌊 0/30</span>
+      <button id="btn-sendwave" class="send-btn">▶ Send Wave</button>
+      <span class="spacer"></span>
+      <button class="hud-btn" id="btn-speed">1×</button>
+      <button class="hud-btn" id="btn-pause">⏸</button>
+      <button class="hud-btn" id="btn-sound">🔊</button>
+      <button class="hud-btn" id="btn-quit">🏠</button>
+    </div>
+    <div id="game-main">
+      <div id="canvas-wrap">
+        <canvas id="canvas" width="960" height="576"></canvas>
+        <div id="overlay" class="hidden"></div>
+      </div>
+      <div id="sidebar">
+        <div id="build-bar"></div>
+        <div id="info-panel"><p class="hint">Select a tower type to build, or click a placed tower to manage it.</p></div>
+        <div id="abilities-bar"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+<div id="toasts"></div>
+
+<script src="js/data.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

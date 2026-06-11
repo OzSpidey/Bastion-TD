@@ -1,0 +1,259 @@
+// Bastion TD — static game data: towers, enemies, maps, perks, achievements.
+
+const CELL = 48, COLS = 20, ROWS = 12;
+
+// Each tower: base stats + two upgrade paths of three tiers.
+// Tier mods mutate the computed stats object, applied in purchase order.
+const TOWERS = {
+  gunner: {
+    name: 'Gunner', icon: '🔫', cost: 50, kind: 'bullet',
+    desc: 'Cheap rapid turret. Hits ground and air.',
+    base: { range: 110, rate: 0.40, dmg: 6, projSpeed: 460, canAir: true },
+    paths: [
+      { name: 'Rapid Fire', tiers: [
+        { name: 'Oiled Trigger', cost: 70, desc: '+33% attack speed', mod: t => { t.rate *= 0.75; } },
+        { name: 'Double Tap', cost: 150, desc: '+43% attack speed', mod: t => { t.rate *= 0.70; } },
+        { name: 'Minigun', cost: 340, desc: 'Attack speed nearly doubled, +2 dmg', mod: t => { t.rate *= 0.55; t.dmg += 2; } },
+      ]},
+      { name: 'Heavy Rounds', tiers: [
+        { name: 'Hollow Points', cost: 80, desc: '+6 damage', mod: t => { t.dmg += 6; } },
+        { name: 'AP Rounds', cost: 170, desc: '+10 dmg, ignores 3 armor', mod: t => { t.dmg += 10; t.pierce += 3; } },
+        { name: 'Depleted Core', cost: 400, desc: '+22 dmg, +30 range', mod: t => { t.dmg += 22; t.range += 30; } },
+      ]},
+    ],
+  },
+  cannon: {
+    name: 'Cannon', icon: '💣', cost: 100, kind: 'shell',
+    desc: 'Splash damage in an area. Cannot hit air.',
+    base: { range: 125, rate: 1.5, dmg: 16, splash: 42, projSpeed: 300, canAir: false },
+    paths: [
+      { name: 'Incendiary', tiers: [
+        { name: 'Hot Shells', cost: 90, desc: 'Hits burn for 8 dmg over 2s', mod: t => { t.burnDps = 4; t.burnDur = 2; } },
+        { name: 'Napalm', cost: 200, desc: 'Burn 24 dmg over 3s, +20% blast', mod: t => { t.burnDps = 8; t.burnDur = 3; t.splash *= 1.2; } },
+        { name: 'Firestorm', cost: 430, desc: '+14 dmg, burn 45 over 3s', mod: t => { t.dmg += 14; t.burnDps = 15; } },
+      ]},
+      { name: 'Demolition', tiers: [
+        { name: 'Bigger Bombs', cost: 110, desc: '+10 dmg, +15% blast', mod: t => { t.dmg += 10; t.splash *= 1.15; } },
+        { name: 'Cluster Shells', cost: 230, desc: 'Each shot fires 2 shells', mod: t => { t.multishot = 2; } },
+        { name: 'Howitzer', cost: 480, desc: '+22 dmg, +40 range, huge blast', mod: t => { t.dmg += 22; t.range += 40; t.splash *= 1.3; } },
+      ]},
+    ],
+  },
+  frost: {
+    name: 'Frost', icon: '❄️', cost: 80, kind: 'pulse',
+    desc: 'Pulses that slow every enemy in range.',
+    base: { range: 95, rate: 1.2, dmg: 3, slowPct: 0.35, slowDur: 2.0, canAir: true },
+    paths: [
+      { name: 'Deep Freeze', tiers: [
+        { name: 'Brittle Ice', cost: 80, desc: 'Slow improved to 45%', mod: t => { t.slowPct = 0.45; } },
+        { name: 'Permafrost', cost: 170, desc: 'Slow 55%, lasts 3s', mod: t => { t.slowPct = 0.55; t.slowDur = 3; } },
+        { name: 'Absolute Zero', cost: 380, desc: '15% chance to freeze 1.5s', mod: t => { t.stunCh = 0.15; t.stunDur = 1.5; } },
+      ]},
+      { name: 'Frostbite', tiers: [
+        { name: 'Ice Shards', cost: 90, desc: '+6 pulse damage', mod: t => { t.dmg += 6; } },
+        { name: 'Shatter', cost: 190, desc: '+10 dmg, +15 range', mod: t => { t.dmg += 10; t.range += 15; } },
+        { name: 'Glacier', cost: 400, desc: '+20 dmg, faster pulses', mod: t => { t.dmg += 20; t.rate *= 0.75; } },
+      ]},
+    ],
+  },
+  tesla: {
+    name: 'Tesla', icon: '⚡', cost: 130, kind: 'chain',
+    desc: 'Lightning that chains between enemies.',
+    base: { range: 105, rate: 0.95, dmg: 11, chain: 3, chainRange: 95, canAir: true },
+    paths: [
+      { name: 'Superconductor', tiers: [
+        { name: 'Copper Coils', cost: 110, desc: 'Chains to 5 targets', mod: t => { t.chain = 5; } },
+        { name: 'Arc Web', cost: 230, desc: 'Chains to 7, +30 jump range', mod: t => { t.chain = 7; t.chainRange += 30; } },
+        { name: 'Storm Core', cost: 470, desc: 'Chains to 10, +8 dmg', mod: t => { t.chain = 10; t.dmg += 8; } },
+      ]},
+      { name: 'Overload', tiers: [
+        { name: 'High Voltage', cost: 120, desc: '+8 damage', mod: t => { t.dmg += 8; } },
+        { name: 'Stun Circuit', cost: 250, desc: '20% chance to stun 0.8s', mod: t => { t.stunCh = 0.2; t.stunDur = 0.8; } },
+        { name: 'Thunderlord', cost: 500, desc: '+16 dmg, faster zaps', mod: t => { t.dmg += 16; t.rate *= 0.75; } },
+      ]},
+    ],
+  },
+  venom: {
+    name: 'Venom', icon: '🧪', cost: 110, kind: 'bullet',
+    desc: 'Poison darts that ignore armor entirely.',
+    base: { range: 100, rate: 1.0, dmg: 4, poisonDps: 4, poisonDur: 4, projSpeed: 380, canAir: true, ignoreArmor: true },
+    paths: [
+      { name: 'Plague', tiers: [
+        { name: 'Virulence', cost: 100, desc: 'Poison 32 dmg over 4s', mod: t => { t.poisonDps = 8; } },
+        { name: 'Contagion', cost: 210, desc: 'Poisoned enemies that die spread poison', mod: t => { t.spreadOnDeath = true; } },
+        { name: 'Black Plague', cost: 440, desc: 'Poison 72 dmg over 4s', mod: t => { t.poisonDps = 18; } },
+      ]},
+      { name: 'Corrosion', tiers: [
+        { name: 'Acid Mix', cost: 100, desc: 'Hits permanently melt 1 armor', mod: t => { t.armorShred = 1; } },
+        { name: 'Solvent', cost: 200, desc: 'Melts 2 armor, +20 range', mod: t => { t.armorShred = 2; t.range += 20; } },
+        { name: 'Disintegrator', cost: 420, desc: '+12 direct dmg, melts 3 armor', mod: t => { t.dmg += 12; t.armorShred = 3; } },
+      ]},
+    ],
+  },
+  sniper: {
+    name: 'Sniper', icon: '🎯', cost: 150, kind: 'hitscan',
+    desc: 'Huge single hits at very long range. Pierces armor.',
+    base: { range: 270, rate: 2.3, dmg: 48, pierce: 99, canAir: true },
+    paths: [
+      { name: 'Deadeye', tiers: [
+        { name: 'Match Barrel', cost: 130, desc: '+30 damage', mod: t => { t.dmg += 30; } },
+        { name: 'Killshot', cost: 280, desc: '25% chance to crit for 3x', mod: t => { t.critCh = 0.25; } },
+        { name: 'Antimatter Rifle', cost: 560, desc: '+90 damage', mod: t => { t.dmg += 90; } },
+      ]},
+      { name: 'Recon', tiers: [
+        { name: 'Spotter Scope', cost: 120, desc: 'Can target stealth enemies', mod: t => { t.seesStealth = true; } },
+        { name: 'Target Marker', cost: 240, desc: 'Marked targets take +15% dmg from everyone', mod: t => { t.markPct = 0.15; t.markDur = 3; } },
+        { name: 'Fire Discipline', cost: 480, desc: '40% faster shots, +20 dmg', mod: t => { t.rate *= 0.6; t.dmg += 20; } },
+      ]},
+    ],
+  },
+  missile: {
+    name: 'Missile', icon: '🚀', cost: 180, kind: 'missile',
+    desc: 'Homing rockets, double damage vs air.',
+    base: { range: 170, rate: 1.8, dmg: 26, splash: 30, projSpeed: 340, canAir: true, bonusVsAir: 2 },
+    paths: [
+      { name: 'Swarm', tiers: [
+        { name: 'Twin Pods', cost: 150, desc: 'Fires 2 missiles', mod: t => { t.multishot = 2; } },
+        { name: 'Rocket Hail', cost: 320, desc: 'Fires 3 missiles', mod: t => { t.multishot = 3; } },
+        { name: 'Saturation', cost: 600, desc: 'Fires 4 missiles, faster reload', mod: t => { t.multishot = 4; t.rate *= 0.85; } },
+      ]},
+      { name: 'Warhead', tiers: [
+        { name: 'HE Payload', cost: 160, desc: '+14 dmg, +20% blast', mod: t => { t.dmg += 14; t.splash *= 1.2; } },
+        { name: 'Thermobaric', cost: 340, desc: '+24 dmg, +35% blast', mod: t => { t.dmg += 24; t.splash *= 1.35; } },
+        { name: 'Tactical Nuke', cost: 650, desc: '+50 dmg, massive blast', mod: t => { t.dmg += 50; t.splash *= 1.5; } },
+      ]},
+    ],
+  },
+  bank: {
+    name: 'Bank', icon: '🏦', cost: 120, kind: 'income',
+    desc: 'Pays cash at the start of every wave.',
+    base: { range: 0, rate: 0, dmg: 0, income: 14 },
+    paths: [
+      { name: 'Investment', tiers: [
+        { name: 'Vault', cost: 110, desc: 'Income +14 per wave', mod: t => { t.income += 14; } },
+        { name: 'Stock Desk', cost: 230, desc: 'Income +24 per wave', mod: t => { t.income += 24; } },
+        { name: 'Federal Reserve', cost: 460, desc: 'Income +48 per wave', mod: t => { t.income += 48; } },
+      ]},
+      { name: 'Interest', tiers: [
+        { name: 'Savings Plan', cost: 120, desc: '+1% of your cash each wave', mod: t => { t.interestPct += 0.01; } },
+        { name: 'Hedge Fund', cost: 260, desc: '+2% of your cash each wave', mod: t => { t.interestPct += 0.01; } },
+        { name: 'Money Printer', cost: 520, desc: '+3.5% of your cash each wave', mod: t => { t.interestPct += 0.015; } },
+      ]},
+    ],
+  },
+  beacon: {
+    name: 'Beacon', icon: '📡', cost: 140, kind: 'support',
+    desc: 'Buffs nearby towers and reveals stealth.',
+    base: { range: 115, rate: 0, dmg: 0, buffDmg: 0.15, buffRate: 0, seesStealth: true },
+    paths: [
+      { name: 'War Drums', tiers: [
+        { name: 'Rally', cost: 130, desc: 'Nearby towers +25% dmg', mod: t => { t.buffDmg = 0.25; } },
+        { name: 'Battle Hymn', cost: 270, desc: 'Also +15% attack speed', mod: t => { t.buffRate = 0.15; } },
+        { name: 'Warlord', cost: 540, desc: '+40% dmg, +25% attack speed', mod: t => { t.buffDmg = 0.40; t.buffRate = 0.25; } },
+      ]},
+      { name: 'Antenna', tiers: [
+        { name: 'Tall Mast', cost: 110, desc: '+30% aura size', mod: t => { t.range *= 1.3; } },
+        { name: 'Relay Net', cost: 220, desc: 'Nearby towers +15% range', mod: t => { t.buffRange = 0.15; } },
+        { name: 'Satellite Uplink', cost: 450, desc: 'Aura covers half the map', mod: t => { t.range *= 1.6; t.buffRange = 0.25; } },
+      ]},
+    ],
+  },
+};
+
+const TOWER_ORDER = ['gunner', 'cannon', 'frost', 'tesla', 'venom', 'sniper', 'missile', 'bank', 'beacon'];
+
+// wcost = budget cost when the wave generator buys this enemy.
+const ENEMIES = {
+  runt:        { name: 'Runt', hp: 22, speed: 55, bounty: 4, lives: 1, radius: 9, color: '#e05c5c', wcost: 4, minWave: 1 },
+  sprinter:    { name: 'Sprinter', hp: 15, speed: 105, bounty: 5, lives: 1, radius: 8, color: '#f2a33c', wcost: 5, minWave: 3 },
+  swarmling:   { name: 'Swarmling', hp: 9, speed: 80, bounty: 2, lives: 1, radius: 6, color: '#d98ce0', wcost: 2, minWave: 5, packs: true },
+  brute:       { name: 'Brute', hp: 95, speed: 36, armor: 3, bounty: 12, lives: 2, radius: 13, color: '#b04a4a', wcost: 13, minWave: 6 },
+  winged:      { name: 'Winged', hp: 34, speed: 72, flying: true, bounty: 8, lives: 1, radius: 9, color: '#7ec8e3', wcost: 9, minWave: 8 },
+  phantom:     { name: 'Phantom', hp: 48, speed: 62, stealth: true, bounty: 10, lives: 1, radius: 9, color: '#9b9bd6', wcost: 11, minWave: 10 },
+  regenerator: { name: 'Regenerator', hp: 85, speed: 46, regen: 7, bounty: 12, lives: 2, radius: 11, color: '#6fce6f', wcost: 13, minWave: 12 },
+  shellback:   { name: 'Shellback', hp: 75, speed: 30, armor: 8, bounty: 14, lives: 2, radius: 12, color: '#8d9db6', wcost: 16, minWave: 14 },
+  splitter:    { name: 'Splitter', hp: 55, speed: 55, bounty: 10, lives: 2, radius: 11, color: '#e0c95c', wcost: 12, minWave: 16, spawnOnDeath: { type: 'swarmling', count: 3 } },
+  juggernaut:  { name: 'Juggernaut', hp: 1600, speed: 22, armor: 10, bounty: 150, lives: 10, radius: 18, color: '#ff5577', boss: true, wcost: 0, minWave: 99 },
+  wyvern:      { name: 'Wyvern', hp: 1000, speed: 36, flying: true, bounty: 150, lives: 10, radius: 16, color: '#66e0ff', boss: true, wcost: 0, minWave: 99 },
+};
+
+// Path maps: waypoint lists in cell coords (off-grid endpoints = edge spawn/exit).
+// Maze maps: open field, towers form the maze.
+const MAPS = [
+  { id: 'meadow', name: 'Green Meadow', type: 'path', diffStars: 1,
+    desc: 'A gentle S-curve. Learn the ropes.',
+    paths: [[[-1, 6], [3, 6], [3, 2], [8, 2], [8, 9], [13, 9], [13, 4], [20, 4]]] },
+  { id: 'riverbend', name: 'Riverbend', type: 'path', diffStars: 1,
+    desc: 'Long straights reward long-range towers.',
+    paths: [[[-1, 2], [16, 2], [16, 6], [3, 6], [3, 10], [20, 10]]] },
+  { id: 'switchback', name: 'Switchback Canyon', type: 'path', diffStars: 2,
+    desc: 'Four hairpins. The kill zone is yours to pick.',
+    paths: [[[-1, 1], [18, 1], [18, 4], [1, 4], [1, 7], [18, 7], [18, 10], [-1, 10]]] },
+  { id: 'crossroads', name: 'Crossroads', type: 'path', diffStars: 3,
+    desc: 'Two lanes merge into one. Split your defense.',
+    paths: [
+      [[-1, 2], [10, 2], [10, 6], [20, 6]],
+      [[-1, 9], [10, 9], [10, 6], [20, 6]],
+    ] },
+  { id: 'spiral', name: 'Frozen Spiral', type: 'path', diffStars: 3,
+    desc: 'A long spiral to a center portal. Hold every ring.',
+    paths: [[[-1, 1], [17, 1], [17, 10], [2, 10], [2, 3], [14, 3], [14, 8], [5, 8], [5, 5], [11, 5]]] },
+  { id: 'openfield', name: 'Open Field', type: 'maze', diffStars: 2,
+    desc: 'Pure maze-building. Towers block the way.',
+    spawns: [[0, 6]], exit: [19, 6],
+    blocked: [[6, 2], [6, 3], [13, 8], [13, 9], [9, 5], [9, 6]] },
+  { id: 'twingates', name: 'Twin Gates', type: 'maze', diffStars: 3,
+    desc: 'Two spawn gates, one exit. Funnel them together.',
+    spawns: [[0, 3], [0, 8]], exit: [19, 6],
+    blocked: [[10, 0], [10, 1], [10, 10], [10, 11], [5, 5], [5, 6], [15, 5], [15, 6]] },
+];
+
+const CAMPAIGN_MAPS = MAPS.filter(m => m.type === 'path');
+const MAZE_MAPS = MAPS.filter(m => m.type === 'maze');
+
+const DIFFICULTIES = [
+  { id: 'easy', name: 'Easy', waves: 20, lives: 25, cash: 240, hpMul: 0.9, rp: 10 },
+  { id: 'normal', name: 'Normal', waves: 30, lives: 20, cash: 200, hpMul: 1.0, rp: 20 },
+  { id: 'hard', name: 'Hard', waves: 40, lives: 15, cash: 180, hpMul: 1.2, rp: 35 },
+];
+
+const ABILITIES = [
+  { id: 'airstrike', name: 'Airstrike', icon: '💥', cd: 45, desc: 'Click a location: 3 explosions, 120 dmg each' },
+  { id: 'frostnova', name: 'Frost Nova', icon: '❄️', cd: 60, desc: 'Slow every enemy 60% for 5s' },
+  { id: 'overclock', name: 'Overclock', icon: '⚙️', cd: 60, desc: 'All towers fire 2x faster for 8s' },
+];
+
+// Permanent meta perks bought with Research Points.
+const PERKS = [
+  { id: 'warchest', name: 'War Chest', icon: '💰', max: 5, baseCost: 8, desc: '+40 starting cash per level', apply: (b, l) => { b.startCash += 40 * l; } },
+  { id: 'walls', name: 'Reinforced Walls', icon: '🧱', max: 5, baseCost: 8, desc: '+4 starting lives per level', apply: (b, l) => { b.startLives += 4 * l; } },
+  { id: 'steel', name: 'Sharpened Steel', icon: '⚔️', max: 5, baseCost: 12, desc: '+4% tower damage per level', apply: (b, l) => { b.dmgMul += 0.04 * l; } },
+  { id: 'optics', name: 'Optics Lab', icon: '🔭', max: 3, baseCost: 12, desc: '+4% tower range per level', apply: (b, l) => { b.rangeMul += 0.04 * l; } },
+  { id: 'salvage', name: 'Salvage Crews', icon: '🔩', max: 4, baseCost: 10, desc: '+5% sell refund per level', apply: (b, l) => { b.sellRate += 0.05 * l; } },
+  { id: 'interest', name: 'Compound Interest', icon: '🪙', max: 4, baseCost: 14, desc: '+0.5% cash interest each wave per level', apply: (b, l) => { b.interest += 0.005 * l; } },
+  { id: 'bounty', name: 'Bounty Hunter', icon: '🎯', max: 5, baseCost: 10, desc: '+4% kill rewards per level', apply: (b, l) => { b.bountyMul += 0.04 * l; } },
+  { id: 'response', name: 'Rapid Response', icon: '⚡', max: 4, baseCost: 12, desc: '-8% ability cooldowns per level', apply: (b, l) => { b.cdMul -= 0.08 * l; } },
+];
+
+const ACHIEVEMENTS = [
+  { id: 'first_win', name: 'First Stand', icon: '🏆', desc: 'Win your first campaign map' },
+  { id: 'untouchable', name: 'Untouchable', icon: '🛡️', desc: 'Win a map without losing a single life' },
+  { id: 'endless_25', name: 'Marathon', icon: '🏃', desc: 'Reach wave 25 in Endless' },
+  { id: 'endless_50', name: 'Ultramarathon', icon: '🔥', desc: 'Reach wave 50 in Endless' },
+  { id: 'maze_25', name: 'Labyrinth Architect', icon: '🌀', desc: 'Reach wave 25 in Maze mode' },
+  { id: 'boss_10', name: 'Giant Slayer', icon: '💀', desc: 'Defeat 10 bosses (lifetime)' },
+  { id: 'rich', name: 'Deep Pockets', icon: '💎', desc: 'Hold $5,000 at once in a match' },
+  { id: 'max_tower', name: 'Masterwork', icon: '⭐', desc: 'Fully upgrade both paths of one tower' },
+  { id: 'daily_win', name: "Today's Hero", icon: '📅', desc: 'Beat a Daily Challenge' },
+  { id: 'star_15', name: 'Constellation', icon: '✨', desc: 'Earn 15 campaign stars' },
+];
+
+// Daily challenge mutators, two are picked by the date seed.
+const MODIFIERS = [
+  { id: 'haste', name: 'Haste', desc: 'Enemies move 25% faster', apply: g => { g.speedMul *= 1.25; } },
+  { id: 'ironhide', name: 'Ironhide', desc: 'Enemies have 30% more HP', apply: g => { g.hpMul *= 1.3; } },
+  { id: 'inflation', name: 'Inflation', desc: 'Towers cost 20% more', apply: g => { g.costMul *= 1.2; } },
+  { id: 'goldrush', name: 'Gold Rush', desc: 'Kills give 30% more cash', apply: g => { g.bountyMul *= 1.3; } },
+  { id: 'austerity', name: 'Austerity', desc: '30% less starting cash', apply: g => { g.cash = Math.round(g.cash * 0.7); } },
+  { id: 'horde', name: 'Horde', desc: '40% more enemies per wave', apply: g => { g.countMul *= 1.4; } },
+];

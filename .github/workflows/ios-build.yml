@@ -1,0 +1,37 @@
+name: Build iOS
+
+# Unsigned build to verify the iOS project compiles.
+# App Store distribution additionally needs an Apple Developer account ($99/yr),
+# signing certificates and a provisioning profile (see README).
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Add iOS platform
+        run: npx cap add ios
+
+      - name: Generate app icons and splash screens
+        if: ${{ hashFiles('resources/icon.png') != '' }}
+        run: npx @capacitor/assets generate --ios
+
+      - name: Sync web assets
+        run: npx cap sync ios
+
+      - name: Build (unsigned)
+        run: |
+          cd ios/App
+          xcodebuild -workspace App.xcworkspace -scheme App \
+            -configuration Release -sdk iphoneos \
+            CODE_SIGNING_ALLOWED=NO build

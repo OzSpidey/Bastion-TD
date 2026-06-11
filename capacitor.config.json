@@ -1,0 +1,9 @@
+{
+  "appId": "com.ozspidey.bastiontd",
+  "appName": "Bastion TD",
+  "webDir": "www",
+  "backgroundColor": "#0c1118",
+  "android": {
+    "allowMixedContent": false
+  }
+}
