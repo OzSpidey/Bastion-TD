@@ -9,6 +9,7 @@ function loadSave() {
     bestEndless: 0, bestMaze: 0, sound: true, music: true, shake: true, dmgNums: true,
     dailyDone: {}, hero: 'aldric', heroXp: {}, dailyStreak: 0, lastDaily: '',
     life: { kills: 0, waves: 0, games: 0, wins: 0 },
+    synergiesFound: {}, quests: { date: '', prog: {}, done: {} },
   };
   try {
     const raw = localStorage.getItem(SAVE_KEY);
@@ -58,6 +59,7 @@ function unlock(id) {
 
 // ============ Menu ============
 function renderMenu() {
+  renderQuests();
   $('#menu-rp').textContent = `(${SAVE.rp} RP)`;
   $('#menu-ach').textContent = `(${Object.keys(SAVE.ach).length}/${ACHIEVEMENTS.length})`;
   const parts = [`⭐ ${starsTotal()}/${CAMPAIGN_MAPS.length * 9} stars`];
@@ -376,6 +378,17 @@ function startGame(cfg) {
     events: {
       onEnd: handleEnd,
       onWave: () => announceNewEnemies(),
+      onBoonDraft: () => showBoonDraft(),
+      onSynergy: names => {
+        for (const nm of names) {
+          if (SAVE.synergiesFound[nm]) continue;
+          SAVE.synergiesFound[nm] = true;
+          const sy = SYNERGIES.find(s => s.name === nm);
+          const found = Object.keys(SAVE.synergiesFound).length;
+          toast(`🔗 <b>Synergy discovered (${found}/${SYNERGIES.length}): ${nm}</b><br>${sy.desc}`);
+          saveSave();
+        }
+      },
       onWaveCleared: n => {
         if (cfg.mode === 'endless') {
           if (n > SAVE.bestEndless) { SAVE.bestEndless = n; saveSave(); }
@@ -426,6 +439,7 @@ function persistHero() {
 function handleEnd(res) {
   if (res.rp > 0) { SAVE.rp += res.rp; }
   persistHero();
+  updateQuests(res);
   SAVE.life.games++;
   SAVE.life.kills += res.kills;
   SAVE.life.waves += res.wavesCleared;
@@ -632,6 +646,12 @@ function refreshInfoPanel() {
       const row = document.createElement('div');
       row.className = 'info-row';
       if (sel.def.kind !== 'income' && sel.def.kind !== 'support') {
+        const oc = document.createElement('button');
+        oc.className = 'oc-btn';
+        oc.id = 'btn-overcharge';
+        oc.title = 'Double attack speed for 6s';
+        oc.addEventListener('click', () => { game.overchargeTower(sel); });
+        row.appendChild(oc);
         const tg = document.createElement('button');
         tg.textContent = '🎯 ' + TARGET_MODES[sel.targetMode];
         tg.addEventListener('click', () => {
@@ -660,6 +680,12 @@ function refreshInfoPanel() {
   panel.querySelectorAll('.upg-btn[data-cost]').forEach(b => {
     b.disabled = game.cash < +b.dataset.cost;
   });
+  const ocBtn = panel.querySelector('#btn-overcharge');
+  if (ocBtn && sel) {
+    if (sel.overchargeT > 0) { ocBtn.textContent = '⚡ ' + Math.ceil(sel.overchargeT) + 's'; ocBtn.disabled = true; ocBtn.classList.add('active'); }
+    else if (sel.ocCd > 0) { ocBtn.textContent = '⚡ ' + Math.ceil(sel.ocCd) + 's'; ocBtn.disabled = true; ocBtn.classList.remove('active'); }
+    else { ocBtn.textContent = '⚡ Overcharge $60'; ocBtn.disabled = game.cash < 60; ocBtn.classList.remove('active'); }
+  }
 }
 
 // ---- wave preview + enemy intros ----
@@ -671,10 +697,12 @@ function refreshWavePreview() {
     return;
   }
   const items = game.previewNextWave();
-  const sig = items.map(i => i.type + i.n).join(',');
+  const nw = game.pendingWave ? game.pendingWave.wave : 0;
+  const omen = nw >= 5 && nw % 7 === 0 && nw % 10 !== 0;
+  const sig = (omen ? 'O' : '') + items.map(i => i.type + i.n).join(',');
   if (sig === previewSig) return;
   previewSig = sig;
-  el.innerHTML = 'Next: ' + items.map(i => {
+  el.innerHTML = (omen ? '<span class="wp-omen">🌑 OMEN ×2💰</span> ' : '') + 'Next: ' + items.map(i => {
     const d = ENEMIES[i.type];
     const warn = d.flying ? ' ✈' : d.stealth ? ' 👁' : (d.armor || 0) >= 5 ? ' 🛡' : '';
     return `<span class="wp-item" title="${d.name}">${d.icon}×${i.n}${warn}</span>`;
@@ -731,6 +759,88 @@ function refreshTutorial() {
   if (step.done(game)) { tutStep++; return; }
   bar.innerHTML = step.text;
   bar.classList.remove('hidden');
+}
+
+// ---- boon draft: pick 1 of 3 every 5th wave ----
+let boonRerolled = false;
+function pickBoons(n) {
+  const pool = BOONS.slice();
+  const out = [];
+  while (out.length < n && pool.length) out.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+  return out;
+}
+function showBoonDraft() {
+  if (!game || game.over) return;
+  game.paused = true;
+  boonRerolled = false;
+  renderBoonCards(pickBoons(3));
+}
+function renderBoonCards(boons) {
+  const cards = boons.map((b, i) =>
+    `<button class="boon-card" data-i="${i}">
+       <span class="bc-icon">${b.icon}</span>
+       <span class="bc-name">${b.name}</span>
+       <span class="bc-desc">${b.desc}</span>
+     </button>`).join('');
+  showOverlay(`
+    <div class="overlay-box boon-box">
+      <h2>⚜️ Choose a Boon</h2>
+      <p class="hint">Wave ${game.wave} cleared — pick one bonus for the rest of this run</p>
+      <div class="boon-row">${cards}</div>
+      <button id="boon-reroll" class="flat-btn" ${boonRerolled ? 'disabled' : ''}>🎲 Reroll (${boonRerolled ? 0 : 1})</button>
+    </div>`);
+  document.querySelectorAll('.boon-card').forEach(el => {
+    el.addEventListener('click', () => {
+      const b = boons[+el.dataset.i];
+      b.apply(game);
+      toast(`${b.icon} <b>${b.name}</b> — ${b.desc}`);
+      Sound.play('upgrade');
+      hideOverlay();
+      game.paused = false;
+    });
+  });
+  $('#boon-reroll').addEventListener('click', () => {
+    if (boonRerolled) return;
+    boonRerolled = true;
+    renderBoonCards(pickBoons(3));
+  });
+}
+
+// ---- daily quests ----
+function dailyQuests() {
+  const date = new Date().toISOString().slice(0, 10);
+  if (SAVE.quests.date !== date) SAVE.quests = { date, prog: {}, done: {} };
+  const rng = mulberry32(hashStr('quests:' + date));
+  const pool = QUESTS.slice();
+  const picked = [];
+  while (picked.length < 3 && pool.length) picked.push(pool.splice(Math.floor(rng() * pool.length), 1)[0]);
+  return picked;
+}
+function updateQuests(res) {
+  const qs = dailyQuests();
+  for (const q of qs) {
+    if (SAVE.quests.done[q.id]) continue;
+    SAVE.quests.prog[q.id] = (SAVE.quests.prog[q.id] || 0) + q.count(res, game);
+    if (SAVE.quests.prog[q.id] >= q.target) {
+      SAVE.quests.done[q.id] = true;
+      SAVE.rp += 15;
+      toast(`${q.icon} <b>Quest complete: ${q.name}!</b> +15 RP`);
+    }
+  }
+  saveSave();
+}
+function renderQuests() {
+  const qs = dailyQuests();
+  $('#menu-quests').innerHTML = '<h4>📜 Today\u2019s quests</h4>' + qs.map(q => {
+    const done = SAVE.quests.done[q.id];
+    const prog = Math.min(q.target, SAVE.quests.prog[q.id] || 0);
+    return `<div class="quest${done ? ' done' : ''}">
+      <span class="q-icon">${q.icon}</span>
+      <span class="q-text">${q.desc}</span>
+      <span class="q-prog">${done ? '✓ +15 RP' : prog + '/' + q.target}</span>
+      <div class="q-bar"><i style="width:${(prog / q.target) * 100}%"></i></div>
+    </div>`;
+  }).join('');
 }
 
 // ---- HUD ----

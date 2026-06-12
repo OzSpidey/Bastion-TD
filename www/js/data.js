@@ -203,6 +203,64 @@ const HEROES = {
 };
 const HERO_ORDER = ['aldric', 'lyra', 'magnus', 'mercy', 'korg'];
 
+// ============ Tower synergies ============
+// Two towers on adjacent tiles (8 directions) link up. Discovered combos
+// are remembered in the player's collection. buffA applies to type a,
+// buffB to type b. Generic fields: dmgMul, rateMul, rangeMul, splashMul,
+// incomeMul, chainAdd, chainRangeAdd, slowOnHit, poisonOnHit.
+const SYNERGIES = [
+  { a: 'gunner', b: 'sniper', name: 'Spotter Team', desc: 'Gunner +20% range, Sniper fires 15% faster',
+    buffA: { rangeMul: 1.20 }, buffB: { rateMul: 1.15 } },
+  { a: 'cannon', b: 'frost', name: 'Shatter Rounds', desc: 'Cannon +25% damage',
+    buffA: { dmgMul: 1.25 }, buffB: {} },
+  { a: 'tesla', b: 'venom', name: 'Conductive Toxin', desc: 'Tesla chains to 2 more, Venom +20% damage',
+    buffA: { chainAdd: 2 }, buffB: { dmgMul: 1.20 } },
+  { a: 'missile', b: 'beacon', name: 'Guidance Link', desc: 'Missile +20% range and +10% damage',
+    buffA: { rangeMul: 1.20, dmgMul: 1.10 }, buffB: {} },
+  { a: 'bank', b: 'beacon', name: 'Trade Hub', desc: 'Bank income +25%',
+    buffA: { incomeMul: 1.25 }, buffB: {} },
+  { a: 'frost', b: 'tesla', name: 'Supercooled Coils', desc: 'Tesla +15% damage, Frost pulses 10% faster',
+    buffA: { rateMul: 1.10 }, buffB: { dmgMul: 1.15 } },
+  { a: 'sniper', b: 'venom', name: 'Toxic Rounds', desc: 'Sniper shots poison (16 dmg over 2s)',
+    buffA: { poisonOnHit: { dps: 8, dur: 2 } }, buffB: {} },
+  { a: 'gunner', b: 'gunner', name: 'Crossfire', desc: 'Both Gunners fire 12% faster',
+    buffA: { rateMul: 1.12 }, buffB: { rateMul: 1.12 } },
+  { a: 'cannon', b: 'missile', name: 'Siege Battery', desc: 'Both gain +15% blast radius',
+    buffA: { splashMul: 1.15 }, buffB: { splashMul: 1.15 } },
+  { a: 'venom', b: 'frost', name: 'Cryotoxin', desc: 'Venom darts also slow 20% for 1.5s',
+    buffA: { slowOnHit: { pct: 0.20, dur: 1.5 } }, buffB: {} },
+  { a: 'tesla', b: 'beacon', name: 'Storm Network', desc: 'Tesla arcs jump 30 further',
+    buffA: { chainRangeAdd: 30 }, buffB: {} },
+  { a: 'sniper', b: 'missile', name: 'Target Uplink', desc: 'Sniper +10%, Missile +15% damage',
+    buffA: { dmgMul: 1.10 }, buffB: { dmgMul: 1.15 } },
+];
+
+// ============ Draft boons ============
+// Every 5th cleared wave: pick 1 of 3 (one reroll allowed). Run-long roguelite layer.
+const BOONS = [
+  { id: 'warchest', icon: '💰', name: 'War Chest', desc: '+$250 right now', apply: g => { g.cash += 250; } },
+  { id: 'sharpen', icon: '⚔️', name: 'Sharpened Steel', desc: 'All towers +8% damage', apply: g => { g.bonuses.dmgMul *= 1.08; } },
+  { id: 'optics', icon: '🔭', name: 'Field Optics', desc: 'All towers +7% range', apply: g => { g.bonuses.rangeMul *= 1.07; } },
+  { id: 'adrenaline', icon: '⚡', name: 'Adrenaline', desc: 'Abilities recharge 20% faster', apply: g => { g.bonuses.cdMul *= 0.8; } },
+  { id: 'bounty', icon: '💵', name: 'Bounty Contracts', desc: '+15% cash from kills', apply: g => { g.bountyMul *= 1.15; } },
+  { id: 'reinforce', icon: '❤️', name: 'Reinforcements', desc: '+5 lives', apply: g => { g.lives += 5; } },
+  { id: 'veterans', icon: '⭐', name: 'Veteran Corps', desc: 'Every current tower gains 15 kills of rank progress', apply: g => { for (const t of g.towers) { t.kills += 15; t.checkRank(); } } },
+  { id: 'training', icon: '🦸', name: 'Hero Training', desc: 'Your hero gains a level', apply: g => { if (g.hero) g.hero.gainXp(g.hero.xpNeed); } },
+  { id: 'interest', icon: '🪙', name: 'Compound Bonds', desc: '+1.5% interest on your cash each wave', apply: g => { g.bonuses.interest += 0.015; } },
+  { id: 'frostsnap', icon: '❄️', name: 'Frost Snap', desc: 'Every new wave starts 40% slowed for 3s', apply: g => { g.frostSnap = true; } },
+];
+
+// ============ Daily quests (3 per day, +15 RP each) ============
+const QUESTS = [
+  { id: 'kills', icon: '⚔️', name: 'Slayer', desc: 'Kill 250 enemies', target: 250, count: (res, g) => res.kills },
+  { id: 'waves', icon: '🌊', name: 'Tide Holder', desc: 'Clear 20 waves', target: 20, count: (res, g) => res.wavesCleared },
+  { id: 'win', icon: '🏆', name: 'Champion', desc: 'Win any map', target: 1, count: (res, g) => res.won ? 1 : 0 },
+  { id: 'boss', icon: '💀', name: 'Giant Hunter', desc: 'Kill 2 bosses', target: 2, count: (res, g) => g.stats.bossKills },
+  { id: 'combo', icon: '🔥', name: 'Chain Reaction', desc: 'Reach a 15-kill combo', target: 1, count: (res, g) => g.stats.bestCombo >= 15 ? 1 : 0 },
+  { id: 'syn', icon: '🔗', name: 'Architect', desc: 'Have 4 synergies active at once', target: 1, count: (res, g) => g.stats.maxSynergies >= 4 ? 1 : 0 },
+];
+
+
 // wcost = budget cost when the wave generator buys this enemy.
 const ENEMIES = {
   runt:        { icon: '👹', name: 'Runt', hp: 22, speed: 55, bounty: 4, lives: 1, radius: 9, color: '#e05c5c', wcost: 4, minWave: 1 },

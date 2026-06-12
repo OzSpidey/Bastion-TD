@@ -708,6 +708,17 @@ function drawEnemy(ctx, e, time) {
   ctx.ellipse(e.x, e.y + r * 0.8 + 2, r * 0.9, r * 0.32, 0, 0, Math.PI * 2);
   ctx.fillStyle = 'rgba(0,0,0,0.35)';
   ctx.fill();
+  if (e.elite) {
+    const p = 0.6 + 0.4 * Math.sin(time * 6);
+    ctx.strokeStyle = 'rgba(251,191,36,' + (0.55 * p).toFixed(2) + ')';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.arc(x, y, r + 5, 0, Math.PI * 2); ctx.stroke();
+    ctx.lineWidth = 1;
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 9px sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('\u2654', x, y - r - 14);
+  }
   const spr = Sprites.enemies[e.type];
   if (spr) {
     // sprite art is 3/4-view: keep upright, just mirror when walking left
@@ -1425,7 +1436,10 @@ class Enemy {
     this.game = game;
     this.type = typeId;
     this.def = ENEMIES[typeId];
-    const hpMul = opts.hpMul != null ? opts.hpMul : game.hpScaleFor(game.wave);
+    let hpMul = opts.hpMul != null ? opts.hpMul : game.hpScaleFor(game.wave);
+    if (game.omenWave && opts.hpMul == null) hpMul *= 1.5;
+    this.elite = !!opts.elite;
+    if (this.elite) hpMul *= 2.2;
     this.maxHp = Math.round(this.def.hp * hpMul);
     this.hp = this.maxHp;
     this.hpMul = hpMul;
@@ -1466,7 +1480,7 @@ class Enemy {
   }
 
   effSpeed() {
-    let s = this.def.speed * this.game.speedMul;
+    let s = this.def.speed * this.game.speedMul * (this.elite ? 0.9 : 1);
     if (this.slowT > 0) s *= (1 - this.slowPct);
     return s;
   }
@@ -1571,7 +1585,7 @@ class Enemy {
         this._dmgT = g.time;
       }
     }
-    if (this.hp <= 0) this.die();
+    if (this.hp <= 0) this.die(opts.src);
   }
 
   applySlow(pct, dur) {
@@ -1584,11 +1598,19 @@ class Enemy {
     if (dps >= this.burnDps) { this.burnDps = dps; this.burnT = dur; }
   }
 
-  die() {
+  die(src) {
     if (this.dead || this.finished) return;
     this.dead = true;
     const g = this.game;
-    const reward = Math.round(this.def.bounty * g.bountyScale());
+    let reward = Math.round(this.def.bounty * g.bountyScale());
+    if (this.elite) reward *= 3;
+    if (g.omenWave) reward *= 2;
+    if (src && src.checkRank) { src.kills++; src.checkRank(); }
+    g.registerKill(src);
+    if (this.elite || g.omenWave) {
+      g.addFx({ type: 'text', x: this.x, y: this.y - 16, t: 0, dur: 0.9, str: '+$' + reward, color: '#fbbf24' });
+      if (this.elite) g.sparkBurst(this.x, this.y, 8, '#fbbf24', 160);
+    }
     g.cash += reward;
     g.stats.kills++;
     g.stats.cashEarned += reward;
@@ -1658,6 +1680,11 @@ class Tower {
     this.aura = { dmg: 0, rate: 0, range: 0 };
     this.angle = -Math.PI / 2;
     this.recoil = 0;
+    this.kills = 0;
+    this.rank = 0;
+    this.overchargeT = 0;
+    this.ocCd = 0;
+    this.resetSyn();
     this.recompute();
   }
 
@@ -1678,13 +1705,30 @@ class Tower {
     this.stats = s;
   }
 
-  get effRange() { return this.stats.range * this.game.bonuses.rangeMul * (1 + this.aura.range); }
-  get effDmg() { return this.stats.dmg * this.game.bonuses.dmgMul * (1 + this.aura.dmg); }
+  resetSyn() {
+    this.syn = { dmgMul: 1, rateMul: 1, rangeMul: 1, splashMul: 1, incomeMul: 1,
+      chainAdd: 0, chainRangeAdd: 0, slowOnHit: null, poisonOnHit: null, names: [] };
+  }
+
+  static RANK_KILLS = [10, 30, 80];
+  checkRank() {
+    while (this.rank < 3 && this.kills >= Tower.RANK_KILLS[this.rank]) {
+      this.rank++;
+      this.game.addFx({ type: 'text', x: this.x, y: this.y - 24, t: 0, dur: 1.1, str: 'RANK UP ' + '\u2605'.repeat(this.rank), color: '#fbbf24' });
+      this.game.addFx({ type: 'ring', x: this.x, y: this.y, t: 0, dur: 0.5, r: 26, color: '#fbbf24' });
+      Sound.play('upgrade');
+    }
+  }
+
+  get effRange() { return this.stats.range * this.game.bonuses.rangeMul * (1 + this.aura.range) * this.syn.rangeMul; }
+  get effDmg() { return this.stats.dmg * this.game.bonuses.dmgMul * (1 + this.aura.dmg) * this.syn.dmgMul * (1 + 0.05 * this.rank); }
   get effRate() {
-    let r = this.stats.rate / (1 + this.aura.rate);
+    let r = this.stats.rate / (1 + this.aura.rate) / this.syn.rateMul;
     if (this.game.overclockT > 0) r *= 0.5;
+    if (this.overchargeT > 0) r *= 0.5;
     return r;
   }
+  get effSplash() { return this.stats.splash * this.syn.splashMul; }
 
   canTarget(e) {
     if (e.dead || e.finished) return false;
@@ -1708,6 +1752,8 @@ class Tower {
   }
 
   update(dt) {
+    if (this.overchargeT > 0) this.overchargeT -= dt;
+    if (this.ocCd > 0) this.ocCd -= dt;
     const k = this.def.kind;
     if (k === 'income' || k === 'support') return;
     if (this.recoil > 0) this.recoil = Math.max(0, this.recoil - dt * 6);
@@ -1752,8 +1798,10 @@ class Tower {
       if (!first) return false;
       const hit = [first];
       let cur = first;
-      while (hit.length < s.chain) {
-        let next = null, bd = s.chainRange * s.chainRange;
+      const maxChain = s.chain + this.syn.chainAdd;
+      const cRange = s.chainRange + this.syn.chainRangeAdd;
+      while (hit.length < maxChain) {
+        let next = null, bd = cRange * cRange;
         for (const e of g.enemies) {
           if (hit.includes(e) || !this.canTarget(e)) continue;
           const d2 = dist2(cur.x, cur.y, e.x, e.y);
@@ -1783,6 +1831,8 @@ class Tower {
       if (s.markPct > 0) { e.markT = s.markDur; e.markPct = s.markPct; }
       this.aimAt(e);
       e.damage(dmg, { pierce: s.pierce, crit, src: this });
+      if (this.syn.poisonOnHit) e.applyPoison(this.syn.poisonOnHit.dps, this.syn.poisonOnHit.dur, false);
+      if (this.syn.slowOnHit) e.applySlow(this.syn.slowOnHit.pct, this.syn.slowOnHit.dur);
       const col = crit ? '#fbbf24' : '#fde68a';
       g.addFx({ type: 'beam', x1: this.x, y1: this.y, x2: e.x, y2: e.y, t: 0, dur: 0.12, color: col });
       g.addFx({ type: 'glowfx', x: e.x, y: e.y, r: crit ? 16 : 10, rgb: crit ? '251,191,36' : '253,230,138', t: 0, dur: 0.2 });
@@ -1848,18 +1898,19 @@ class Projectile {
     this.dead = true;
     const g = this.game, s = this.tower.stats, tw = this.tower;
     const dmg = tw.effDmg;
+    const splash = tw.effSplash;
     const opts = { pierce: s.pierce, ignoreArmor: s.ignoreArmor, armorShred: s.armorShred, src: tw };
-    if (s.splash > 0) {
+    if (splash > 0) {
       // fireball, sparks, rising smoke and a lingering scorch mark
       g.addShake(s.splash > 50 ? 2.5 : 1.4);
-      g.addFx({ type: 'glowfx', x: this.lastX, y: this.lastY, r: s.splash * 0.95, rgb: '255,200,110', t: 0, dur: 0.28 });
-      g.addFx({ type: 'boom', x: this.lastX, y: this.lastY, t: 0, dur: 0.3, r: s.splash, color: '#fca5a5' });
-      g.addGround({ type: 'scorch', x: this.lastX, y: this.lastY, r: s.splash * 0.75, t: 0, dur: 4 });
+      g.addFx({ type: 'glowfx', x: this.lastX, y: this.lastY, r: splash * 0.95, rgb: '255,200,110', t: 0, dur: 0.28 });
+      g.addFx({ type: 'boom', x: this.lastX, y: this.lastY, t: 0, dur: 0.3, r: splash, color: '#fca5a5' });
+      g.addGround({ type: 'scorch', x: this.lastX, y: this.lastY, r: splash * 0.75, t: 0, dur: 4 });
       g.sparkBurst(this.lastX, this.lastY, 9, '#fdba74', 200);
       for (let i = 0; i < 5; i++) {
         g.addParticle({
-          kind: 'smoke', x: this.lastX + (Math.random() - 0.5) * s.splash * 0.6,
-          y: this.lastY + (Math.random() - 0.5) * s.splash * 0.4,
+          kind: 'smoke', x: this.lastX + (Math.random() - 0.5) * splash * 0.6,
+          y: this.lastY + (Math.random() - 0.5) * splash * 0.4,
           vx: (Math.random() - 0.5) * 16, vy: -18 - Math.random() * 24,
           size: 3.5 + Math.random() * 3.5, t: 0, dur: 0.6 + Math.random() * 0.4,
         });
@@ -1868,7 +1919,7 @@ class Projectile {
       for (const e of g.enemies) {
         if (e.dead || e.finished) continue;
         if (e.def.flying && !s.canAir) continue;
-        if (dist2(e.x, e.y, this.lastX, this.lastY) <= (s.splash + e.def.radius) * (s.splash + e.def.radius)) {
+        if (dist2(e.x, e.y, this.lastX, this.lastY) <= (splash + e.def.radius) * (splash + e.def.radius)) {
           let d = dmg;
           if (e.def.flying && s.bonusVsAir > 1) d *= s.bonusVsAir;
           e.damage(d, opts);
@@ -1883,6 +1934,8 @@ class Projectile {
         e.damage(d, opts);
         if (s.poisonDps > 0) e.applyPoison(s.poisonDps, s.poisonDur, s.spreadOnDeath);
         if (s.burnDps > 0) e.applyBurn(s.burnDps, s.burnDur);
+        if (tw.syn.poisonOnHit) e.applyPoison(tw.syn.poisonOnHit.dps, tw.syn.poisonOnHit.dur, false);
+        if (tw.syn.slowOnHit) e.applySlow(tw.syn.slowOnHit.pct, tw.syn.slowOnHit.dur);
         if (s.poisonDps > 0) {
           // venom splat: drips + a stain on the ground
           const blobs = [];
@@ -1962,8 +2015,12 @@ class Game {
     this.shakeMag = 0;
     this.settings = Object.assign({ shake: true, dmgNums: true }, opts.settings || {});
     this.cds = {}; ABILITIES.forEach(a => { this.cds[a.id] = 0; });
-    this.stats = { kills: 0, bossKills: 0, cashEarned: 0, leaks: 0 };
+    this.stats = { kills: 0, bossKills: 0, cashEarned: 0, leaks: 0, bestCombo: 0, maxSynergies: 0 };
     this.pendingWave = null; // generated after terrain setup
+    this.combo = { n: 0, t: -10, window: 1.2 };
+    this.omenWave = false;
+    this.frostSnap = false;
+    this.activeSynergies = [];
     this.richEmitted = false;
 
     // terrain precompute
@@ -2025,6 +2082,84 @@ class Game {
   }
 
   emit(name, ...args) { if (this.events[name]) this.events[name](...args); }
+
+  // ---- kill combos: chained kills build a cash multiplier ----
+  registerKill(src) {
+    const c = this.combo;
+    const isHero = !!(src && src.gainXp);
+    if (this.time - c.t <= c.window) c.n++;
+    else c.n = 1;
+    c.t = this.time;
+    c.window = isHero ? 2.0 : 1.2;
+    if (c.n > this.stats.bestCombo) this.stats.bestCombo = c.n;
+  }
+  updateCombo() {
+    const c = this.combo;
+    if (c.n >= 5 && this.time - c.t > c.window) {
+      const bonus = c.n * 3;
+      this.cash += bonus;
+      this.stats.cashEarned += bonus;
+      this.addFx({ type: 'text', x: COLS * CELL / 2, y: 96, t: 0, dur: 1.3, str: '\ud83d\udd25 COMBO x' + c.n + '  +$' + bonus, color: '#fb923c' });
+      Sound.play('cash');
+      c.n = 0;
+    } else if (c.n > 0 && this.time - c.t > c.window) {
+      c.n = 0;
+    }
+  }
+
+  // ---- adjacency synergies ----
+  recomputeSynergies() {
+    for (const t of this.towers) { t.resetSyn(); t.recompute(); }
+    const seen = new Set();
+    const active = [];
+    for (const t1 of this.towers) {
+      for (const t2 of this.towers) {
+        if (t1 === t2) continue;
+        if (Math.abs(t1.cx - t2.cx) > 1 || Math.abs(t1.cy - t2.cy) > 1) continue;
+        for (const sy of SYNERGIES) {
+          if (sy.a === t1.type && sy.b === t2.type) {
+            const pairKey = sy.name + ':' + Math.min(t1.cx + t1.cy * COLS, t2.cx + t2.cy * COLS) + ':' + Math.max(t1.cx + t1.cy * COLS, t2.cx + t2.cy * COLS);
+            if (seen.has(pairKey)) continue;
+            seen.add(pairKey);
+            this.applySynBuff(t1, sy.buffA, sy.name);
+            this.applySynBuff(t2, sy.buffB, sy.name);
+            active.push({ name: sy.name, a: t1, b: t2 });
+          }
+        }
+      }
+    }
+    this.activeSynergies = active;
+    const distinct = new Set(active.map(s => s.name)).size;
+    if (distinct > this.stats.maxSynergies) this.stats.maxSynergies = distinct;
+    if (active.length) this.emit('onSynergy', active.map(s => s.name));
+  }
+  applySynBuff(t, buff, name) {
+    if (!buff) return;
+    if (!t.syn.names.includes(name)) t.syn.names.push(name);
+    if (buff.dmgMul) t.syn.dmgMul *= buff.dmgMul;
+    if (buff.rateMul) t.syn.rateMul *= buff.rateMul;
+    if (buff.rangeMul) t.syn.rangeMul *= buff.rangeMul;
+    if (buff.splashMul) t.syn.splashMul *= buff.splashMul;
+    if (buff.incomeMul) t.syn.incomeMul *= buff.incomeMul;
+    if (buff.chainAdd) t.syn.chainAdd += buff.chainAdd;
+    if (buff.chainRangeAdd) t.syn.chainRangeAdd += buff.chainRangeAdd;
+    if (buff.slowOnHit) t.syn.slowOnHit = buff.slowOnHit;
+    if (buff.poisonOnHit) t.syn.poisonOnHit = buff.poisonOnHit;
+  }
+
+  // ---- tap-to-overcharge: active player verb on any combat tower ----
+  overchargeTower(t) {
+    const COST = 60;
+    if (t.def.kind === 'income' || t.def.kind === 'support') return false;
+    if (t.ocCd > 0 || this.cash < COST || this.over) return false;
+    this.cash -= COST;
+    t.overchargeT = 6;
+    t.ocCd = 30;
+    this.addFx({ type: 'ring', x: t.x, y: t.y, t: 0, dur: 0.5, r: 30, color: '#fb923c' });
+    this.addFx({ type: 'text', x: t.x, y: t.y - 26, t: 0, dur: 1, str: '\u26a1 OVERCHARGE', color: '#fb923c' });
+    Sound.play('upgrade');
+    return true;
+  }
 
   // ---- maze flow field (BFS from exit) ----
   computeFlow(extraKey = null) {
@@ -2097,6 +2232,7 @@ class Game {
     const t = new Tower(this, typeId, c, r, cost);
     this.towers.push(t);
     this.towerGrid.set(cellKey(c, r), t);
+    this.recomputeSynergies();
     if (this.isMaze) this.rebuildFlow();
     Sound.play('build');
     return true;
@@ -2107,6 +2243,7 @@ class Game {
     this.cash += refund;
     this.towers = this.towers.filter(x => x !== t);
     this.towerGrid.delete(cellKey(t.cx, t.cy));
+    this.recomputeSynergies();
     if (this.selected === t) this.selected = null;
     if (this.isMaze) this.rebuildFlow();
     this.addFx({ type: 'text', x: t.x, y: t.y, t: 0, dur: 0.8, str: '+$' + refund, color: '#fbbf24' });
@@ -2172,6 +2309,13 @@ class Game {
       budget -= count * def.wcost;
     }
     entries.sort((a, b) => a.t - b.t);
+    if (n >= 8) {
+      let elites = 0;
+      for (const e2 of entries) {
+        if (elites >= 3) break;
+        if (!ENEMIES[e2.type].boss && rng() < 0.06) { e2.elite = true; elites++; }
+      }
+    }
     return entries;
   }
 
@@ -2186,9 +2330,10 @@ class Game {
     }
     this.autoTimer = 0;
     this.wave++;
+    this.omenWave = this.wave >= 5 && this.wave % 7 === 0 && this.wave % 10 !== 0;
     // bank income + interest at wave start
     let income = 0, pct = this.bonuses.interest;
-    for (const tw of this.towers) { income += tw.stats.income; pct += tw.stats.interestPct; }
+    for (const tw of this.towers) { income += tw.stats.income * tw.syn.incomeMul; pct += tw.stats.interestPct; }
     if (income > 0 || pct > 0) {
       const interest = Math.min(500, Math.floor(this.cash * pct));
       const total = income + interest;
@@ -2204,7 +2349,9 @@ class Game {
     this.waveActive = true;
     this.waveTime = 0;
     const isBoss = this.mode === 'bossrush' || this.wave % 10 === 0;
-    this.addFx({ type: 'banner', t: 0, dur: 1.8, str: (isBoss ? '☠ BOSS ' : '') + 'WAVE ' + this.wave, color: isBoss ? '#ff5577' : '#e2e8f0' });
+    const label = this.omenWave ? '\ud83c\udf11 OMEN WAVE ' + this.wave : (isBoss ? '\u2620 BOSS ' : '') + 'WAVE ' + this.wave;
+    this.addFx({ type: 'banner', t: 0, dur: 1.8, str: label, color: this.omenWave ? '#c084fc' : isBoss ? '#ff5577' : '#e2e8f0' });
+    if (this.omenWave) this.addFx({ type: 'text', x: COLS * CELL / 2, y: CELL * ROWS * 0.34 + 44, t: 0, dur: 2.2, str: 'Enemies +50% HP \u00b7 double bounty', color: '#c084fc' });
     Sound.play('wave');
     this.emit('onWave', this.wave);
   }
@@ -2358,7 +2505,9 @@ class Game {
       this.waveTime += dt;
       while (this.spawnQueue.length && this.spawnQueue[0].t <= this.waveTime) {
         const s = this.spawnQueue.shift();
-        this.enemies.push(new Enemy(this, s.type, { pathIndex: s.pathIndex }));
+        const ne = new Enemy(this, s.type, { pathIndex: s.pathIndex, elite: s.elite });
+        if (this.frostSnap && this.waveTime < 3.5) ne.applySlow(0.4, 3.5 - this.waveTime + 0.4);
+        this.enemies.push(ne);
       }
     }
 
@@ -2417,12 +2566,16 @@ class Game {
       this.emit('onAch', 'rich');
     }
 
+    this.updateCombo();
+
     if (this.waveActive && this.spawnQueue.length === 0 && this.enemies.length === 0) {
       this.waveActive = false;
+      this.omenWave = false;
       const bonus = 30 + 4 * this.wave;
       this.cash += bonus;
       this.addFx({ type: 'text', x: COLS * CELL / 2, y: 60, t: 0, dur: 1.4, str: 'Wave cleared +$' + bonus, color: '#4ade80' });
       this.emit('onWaveCleared', this.wave);
+      if (this.wave % 5 === 0 && this.mode !== 'sandbox' && !this.over) this.emit('onBoonDraft', this.wave);
       if (this.totalWaves && this.wave >= this.totalWaves) { this.end(true); return; }
       this.autoTimer = 12;
     }
@@ -2457,6 +2610,9 @@ class Game {
     if (!s.canAir) lines.push('Cannot hit air');
     if (s.seesStealth) lines.push('Sees stealth');
     if (t.totalDmg > 0) lines.push('Total dealt: ' + (t.totalDmg >= 10000 ? (t.totalDmg / 1000).toFixed(1) + 'k' : Math.round(t.totalDmg)));
+    if (t.rank > 0) lines.push('Veteran ' + '\u2605'.repeat(t.rank) + '  (' + t.kills + ' kills, +' + (t.rank * 5) + '% dmg)');
+    else if (t.kills > 0) lines.push(t.kills + '/' + Tower.RANK_KILLS[0] + ' kills to rank \u2605');
+    for (const nm of t.syn.names) lines.push('\ud83d\udd17 ' + nm);
 
     const title = t.def.name + '  ' + t.levels[0] + '/' + t.levels[1];
     ctx.font = 'bold 12px "Segoe UI", sans-serif';
@@ -2730,6 +2886,19 @@ class Game {
         const cx = (c + 0.5) * CELL, cy = (r + 0.5) * CELL;
         ctx.fillStyle = ok ? 'rgba(74,222,128,0.18)' : 'rgba(248,113,113,0.20)';
         ctx.fillRect(c * CELL, r * CELL, CELL, CELL);
+        // synergy hint: gold pulse on neighbors that would link up
+        const hintP = 0.5 + 0.5 * Math.sin(this.time * 6);
+        for (const t2 of this.towers) {
+          if (Math.abs(t2.cx - c) > 1 || Math.abs(t2.cy - r) > 1) continue;
+          if (!SYNERGIES.some(sy => (sy.a === this.buildType && sy.b === t2.type) || (sy.a === t2.type && sy.b === this.buildType))) continue;
+          ctx.strokeStyle = 'rgba(251,191,36,' + (0.35 + 0.45 * hintP).toFixed(2) + ')';
+          ctx.lineWidth = 2.5;
+          ctx.beginPath(); ctx.arc(t2.x, t2.y, 20, 0, Math.PI * 2); ctx.stroke();
+          ctx.lineWidth = 1;
+          ctx.font = '12px sans-serif';
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillText('\ud83d\udd17', t2.x, t2.y - 26);
+        }
         const def = TOWERS[this.buildType];
         if (def.base.range > 0) {
           ctx.beginPath();
@@ -2769,6 +2938,36 @@ class Game {
         ctx.strokeStyle = 'rgba(56,189,248,0.6)';
         ctx.stroke();
       }
+      if (t.overchargeT > 0) {
+        const p = 0.5 + 0.5 * Math.sin(this.time * 10);
+        ctx.beginPath();
+        ctx.arc(t.x, t.y, 22, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(251,146,60,' + (0.4 + 0.5 * p).toFixed(2) + ')';
+        ctx.lineWidth = 2; ctx.stroke(); ctx.lineWidth = 1;
+      }
+      for (let i = 0; i < t.rank; i++) {
+        ctx.fillStyle = '#fbbf24';
+        ctx.font = '8px sans-serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('\u2605', t.x - 12 + i * 7, t.y - 17);
+      }
+    }
+
+    // synergy link lines for the selected tower
+    if (this.selected) {
+      const p = 0.4 + 0.3 * Math.sin(this.time * 5);
+      for (const sy of this.activeSynergies) {
+        if (sy.a !== this.selected && sy.b !== this.selected) continue;
+        ctx.strokeStyle = 'rgba(251,191,36,' + p.toFixed(2) + ')';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 4]);
+        ctx.beginPath(); ctx.moveTo(sy.a.x, sy.a.y); ctx.lineTo(sy.b.x, sy.b.y); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.lineWidth = 1;
+        ctx.font = '11px sans-serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('\ud83d\udd17', (sy.a.x + sy.b.x) / 2, (sy.a.y + sy.b.y) / 2 - 8);
+      }
     }
 
     // enemies
@@ -2776,6 +2975,24 @@ class Game {
 
     // hero
     if (this.hero) this.hero.draw(ctx, this.time);
+
+    // active combo counter
+    if (this.combo.n >= 3 && this.time - this.combo.t <= this.combo.window) {
+      const pulse = 1 + 0.08 * Math.sin(this.time * 14);
+      ctx.save();
+      ctx.translate(W / 2, 64);
+      ctx.scale(pulse, pulse);
+      ctx.font = 'bold 22px "Segoe UI", sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.strokeStyle = 'rgba(0,0,0,0.7)';
+      ctx.lineWidth = 4;
+      const cstr = '\ud83d\udd25 x' + this.combo.n;
+      ctx.strokeText(cstr, 0, 0);
+      ctx.fillStyle = this.combo.n >= 15 ? '#f87171' : this.combo.n >= 8 ? '#fb923c' : '#fbbf24';
+      ctx.fillText(cstr, 0, 0);
+      ctx.restore();
+      ctx.lineWidth = 1;
+    }
 
     // projectiles
     for (const p of this.projectiles) {

@@ -390,3 +390,41 @@ body {
   .hero-chip { min-width: 84px; }
   #topbar { flex-wrap: wrap; }
 }
+
+/* ===== Boon draft ===== */
+.boon-box { max-width: 640px; }
+.boon-row { display: flex; gap: 12px; justify-content: center; margin: 18px 0 14px; }
+.boon-card {
+  flex: 1; max-width: 180px; display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 18px 12px; cursor: pointer;
+  background: linear-gradient(160deg, var(--panel2), var(--panel));
+  border: 1px solid var(--line); border-radius: 12px; color: var(--text);
+  transition: transform .15s, border-color .15s, box-shadow .15s;
+}
+.boon-card:hover {
+  transform: translateY(-4px) scale(1.03);
+  border-color: var(--gold);
+  box-shadow: 0 8px 22px rgba(0,0,0,.5), 0 0 18px rgba(251,191,36,.18);
+}
+.bc-icon { font-size: 30px; }
+.bc-name { font-weight: 700; font-size: 14px; }
+.bc-desc { font-size: 12px; color: var(--dim); line-height: 1.35; }
+
+/* ===== Quests ===== */
+#menu-quests { max-width: 420px; margin: 18px auto 0; }
+#menu-quests h4 { color: var(--dim); font-size: 13px; margin-bottom: 8px; text-align: center; }
+.quest {
+  position: relative; display: flex; align-items: center; gap: 8px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+  padding: 8px 12px 12px; margin-bottom: 6px; font-size: 13px;
+}
+.quest.done { opacity: .6; }
+.quest .q-text { flex: 1; }
+.quest .q-prog { color: var(--gold); font-size: 12px; }
+.quest .q-bar { position: absolute; left: 10px; right: 10px; bottom: 4px; height: 3px; background: var(--panel2); border-radius: 2px; }
+.quest .q-bar i { display: block; height: 100%; background: var(--accent); border-radius: 2px; }
+
+/* ===== Overcharge + omen ===== */
+.oc-btn { color: #fb923c !important; border-color: rgba(251,146,60,.4) !important; }
+.oc-btn.active { background: rgba(251,146,60,.15) !important; }
+.wp-omen { color: #c084fc; font-weight: 700; }
