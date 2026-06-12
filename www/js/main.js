@@ -86,23 +86,30 @@ function mapUnlocked(mode, idx) {
 function drawMiniMap(cv, map) {
   const s = cv.width / COLS;
   const x = cv.getContext('2d');
-  x.fillStyle = '#0e141d';
+  const theme = THEMES[map.theme] || THEMES.grass;
+  const bg = x.createLinearGradient(0, 0, 0, cv.height);
+  bg.addColorStop(0, theme.ground[0]);
+  bg.addColorStop(1, theme.ground[2]);
+  x.fillStyle = bg;
   x.fillRect(0, 0, cv.width, cv.height);
   if (map.type === 'path') {
-    x.strokeStyle = '#5b513a';
-    x.lineWidth = s * 0.8;
     x.lineCap = 'round'; x.lineJoin = 'round';
-    for (const wps of map.paths) {
-      x.beginPath();
-      wps.forEach(([c, r], i) => {
-        const px = (c + 0.5) * s, py = (r + 0.5) * s;
-        if (i === 0) x.moveTo(px, py); else x.lineTo(px, py);
-      });
-      x.stroke();
+    for (const [w, col] of [[s * 0.95, theme.pathEdge], [s * 0.7, theme.path]]) {
+      x.strokeStyle = col;
+      x.lineWidth = w;
+      for (const wps of map.paths) {
+        x.beginPath();
+        wps.forEach(([c, r], i) => {
+          const px = (c + 0.5) * s, py = (r + 0.5) * s;
+          if (i === 0) x.moveTo(px, py); else x.lineTo(px, py);
+        });
+        x.stroke();
+      }
     }
+    x.lineWidth = 1;
   } else {
     for (const [c, r] of (map.blocked || [])) {
-      x.fillStyle = '#3d506b';
+      x.fillStyle = theme.rock[1];
       x.fillRect(c * s + 1, r * s + 1, s - 2, s - 2);
     }
     for (const [c, r] of map.spawns) { x.fillStyle = '#4ade80'; x.fillRect(c * s, r * s, s, s); }
