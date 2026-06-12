@@ -1,10 +1,12 @@
 # Bastion TD
 
+**▶ Play now: https://ozspidey.github.io/Bastion-TD/**
+
 A production tower defense game built from the best ideas in the genre. One JavaScript codebase ships to three targets: web (GitHub Pages), Android (Play Store) and iOS (App Store) via Capacitor. All builds run in GitHub Actions, nothing needs to be installed locally.
 
 ## Play
 
-1. **Web**: deployed automatically to GitHub Pages on every push to `main`.
+1. **Web**: **https://ozspidey.github.io/Bastion-TD/** — deployed automatically to GitHub Pages on every push to `main`.
 2. **Local**: open `www/index.html` in any browser.
 3. **Android**: download the debug APK artifact from the latest "Build Android" workflow run and install it on any phone.
 
