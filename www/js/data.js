@@ -203,6 +203,31 @@ const HEROES = {
 };
 const HERO_ORDER = ['aldric', 'lyra', 'magnus', 'mercy', 'korg'];
 
+// ============ Curse contracts ============
+// Optional pre-match debuffs; each accepted curse pays +25% Research Points.
+const CURSES = [
+  { id: 'chaste', icon: '💨', name: 'Fleet-Footed', desc: 'Enemies move 20% faster', apply: g => { g.speedMul *= 1.20; } },
+  { id: 'ciron', icon: '🛡️', name: 'Iron Horde', desc: 'Enemies have 30% more HP', apply: g => { g.hpMul *= 1.3; } },
+  { id: 'cinfl', icon: '💸', name: 'War Tax', desc: 'Towers cost 15% more', apply: g => { g.costMul *= 1.15; } },
+  { id: 'cswarm', icon: '🐜', name: 'Endless Tide', desc: '30% more enemies per wave', apply: g => { g.countMul *= 1.3; } },
+  { id: 'cfog', icon: '🌫️', name: 'Fog of War', desc: 'No next-wave preview', apply: g => { g.cursedNoPreview = true; } },
+];
+
+// ============ Map hazards ============
+// Tap-to-trigger environmental strikes ($90, 40s cooldown, big blast).
+const MAP_HAZARDS = {
+  meadow: [[8, 5], [13, 6]],
+  riverbend: [[10, 2], [8, 6]],
+  switchback: [[9, 4], [9, 7]],
+  crossroads: [[10, 4], [15, 6]],
+  spiral: [[9, 3], [8, 8]],
+  openfield: [[11, 6], [5, 6]],
+  twingates: [[8, 5], [12, 6]],
+  oasis: [[10, 5], [5, 5]],
+  cinderpeak: [[3, 8], [12, 6]],
+  ashworks: [[10, 5], [4, 8]],
+};
+
 // ============ Tower synergies ============
 // Two towers on adjacent tiles (8 directions) link up. Discovered combos
 // are remembered in the player's collection. buffA applies to type a,

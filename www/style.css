@@ -428,3 +428,22 @@ body {
 .oc-btn { color: #fb923c !important; border-color: rgba(251,146,60,.4) !important; }
 .oc-btn.active { background: rgba(251,146,60,.15) !important; }
 .wp-omen { color: #c084fc; font-weight: 700; }
+
+/* ===== Curse contracts ===== */
+#curse-strip {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  margin: 0 0 14px; padding: 8px 12px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+}
+.curse-chip {
+  padding: 5px 10px; font-size: 12px; cursor: pointer;
+  background: var(--panel2); color: var(--dim);
+  border: 1px solid var(--line); border-radius: 999px;
+  transition: border-color .15s, color .15s;
+}
+.curse-chip:hover { border-color: var(--red); }
+.curse-chip.sel { color: var(--red); border-color: var(--red); background: rgba(248,113,113,.10); }
+
+/* ===== Ascension ===== */
+.ascend-btn { border-color: var(--gold) !important; color: var(--text); }
+.ascend-btn b { color: var(--gold); }

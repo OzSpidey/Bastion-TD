@@ -131,6 +131,7 @@ function showMaps(mode) {
   $('#maps-title').textContent = titles[mode] + ' — Select Map';
   $('#daily-banner').classList.add('hidden');
   renderHeroStrip();
+  renderCurseStrip();
   const list = mode === 'campaign' || mode === 'endless' || mode === 'bossrush' ? CAMPAIGN_MAPS
     : mode === 'maze' ? MAZE_MAPS : MAPS;
   const grid = $('#maps-grid');
@@ -196,6 +197,26 @@ function renderHeroStrip() {
       SAVE.hero = id;
       saveSave();
       renderHeroStrip();
+    });
+    strip.appendChild(b);
+  }
+}
+
+// ============ Curse contracts picker ============
+let selectedCurses = [];
+function renderCurseStrip() {
+  const strip = $('#curse-strip');
+  strip.innerHTML = '<span class="hs-label">\u2620 Curses (optional, +25% RP each):</span>';
+  for (const c of CURSES) {
+    const b = document.createElement('button');
+    const on = selectedCurses.includes(c.id);
+    b.className = 'curse-chip' + (on ? ' sel' : '');
+    b.innerHTML = `${c.icon} ${c.name}`;
+    b.title = c.desc;
+    b.addEventListener('click', () => {
+      if (on) selectedCurses = selectedCurses.filter(x => x !== c.id);
+      else if (selectedCurses.length < 3) selectedCurses.push(c.id);
+      renderCurseStrip();
     });
     strip.appendChild(b);
   }
@@ -374,11 +395,14 @@ function startGame(cfg) {
     modifierIds: cfg.modifierIds,
     seed: cfg.seed,
     heroId: SAVE.hero,
+    curseIds: cfg.mode === 'sandbox' ? [] : selectedCurses,
     settings: { shake: SAVE.shake, dmgNums: SAVE.dmgNums },
     events: {
       onEnd: handleEnd,
       onWave: () => announceNewEnemies(),
       onBoonDraft: () => showBoonDraft(),
+      onRelic: art => toast(`\ud83d\udc8e <b>Relic claimed: ${art.name}</b><br>${art.desc}`),
+      onMutator: m => toast(`\ud83c\udf00 <b>Endless mutator: ${m.name}</b><br>${m.desc}`),
       onSynergy: names => {
         for (const nm of names) {
           if (SAVE.synergiesFound[nm]) continue;
@@ -484,11 +508,29 @@ function handleEnd(res) {
       <p class="rp-earned">🔬 +${res.rp} Research Points</p>
       <div class="btn-row">
         <button id="ov-replay">↻ Replay</button>
+        ${gameCfg.mode === 'daily' ? '<button id="ov-share">📋 Share</button>' : ''}
         <button id="ov-menu">🏠 Menu</button>
       </div>
     </div>`);
   $('#ov-replay').addEventListener('click', () => startGame(gameCfg));
   $('#ov-menu').addEventListener('click', goMenu);
+  const shareBtn = $('#ov-share');
+  if (shareBtn) {
+    shareBtn.addEventListener('click', () => {
+      const hearts = game ? Math.max(0, game.lives) : 0;
+      const txt = [
+        `\ud83c\udff0 Bastion TD Daily ${gameCfg.dateStr}`,
+        `${res.won ? '\ud83c\udfc6' : '\ud83d\udc80'} Wave ${res.wavesCleared}/25 \u00b7 \u2764\ufe0f ${hearts}`,
+        `\ud83d\udd25 Best combo x${game ? game.stats.bestCombo : 0} \u00b7 \ud83d\udd17 ${game ? game.stats.maxSynergies : 0} synergies`,
+        SAVE.dailyStreak > 1 ? `\ud83d\udd25 ${SAVE.dailyStreak}-day streak` : '',
+        'https://ozspidey.github.io/Bastion-TD/',
+      ].filter(Boolean).join('\n');
+      (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(
+        () => toast('\ud83d\udccb Result copied \u2014 paste it anywhere!'),
+        () => toast('Could not copy automatically')
+      );
+    });
+  }
 }
 
 function goMenu() {
@@ -600,7 +642,7 @@ function refreshInfoPanel() {
   const sig = hero
     ? `h:${hero.lvl}:${Math.ceil(hero.hp / 10)}:${hero.alive ? 1 : Math.ceil(hero.respawnT)}`
     : sel
-      ? `t:${sel.cx},${sel.cy}:${sel.levels[0]}:${sel.levels[1]}:${sel.targetMode}`
+      ? `t:${sel.cx},${sel.cy}:${sel.levels[0]}:${sel.levels[1]}:${sel.targetMode}:${sel.ascended ? 1 : 0}:${sel.rank}`
       : (game.buildType ? 'b:' + game.buildType : 'none');
   const panel = $('#info-panel');
   if (sig !== infoSig) {
@@ -620,7 +662,8 @@ function refreshInfoPanel() {
     }
     if (sel) {
       const head = document.createElement('div');
-      head.innerHTML = `<h3>${sel.def.icon} ${sel.def.name}</h3><p class="tstats">${fmtStats(sel.stats, game)}</p>`;
+      const selName = (sel.vetName ? `\u201c${sel.vetName}\u201d ` : '') + sel.def.name + (sel.ascended ? ' \u2728' : '') + (sel.rank ? ' ' + '\u2605'.repeat(sel.rank) : '');
+      head.innerHTML = `<h3>${sel.def.icon} ${selName}</h3><p class="tstats">${fmtStats(sel.stats, game)}</p>`;
       panel.appendChild(head);
       sel.def.paths.forEach((path, p) => {
         const wrap = document.createElement('div');
@@ -643,6 +686,15 @@ function refreshInfoPanel() {
         wrap.appendChild(btn);
         panel.appendChild(wrap);
       });
+      if (sel.levels[0] >= 3 && sel.levels[1] >= 3 && !sel.ascended) {
+        const ab = document.createElement('button');
+        ab.className = 'upg-btn ascend-btn';
+        const acost = Math.round(800 * game.costMul);
+        ab.innerHTML = `<b>\u2728 ASCEND</b><span class="u-cost">$${acost}</span><br>+30% damage, +18% speed, +15% range, golden aura`;
+        ab.dataset.cost = acost;
+        ab.addEventListener('click', () => { if (game.ascend(sel)) infoSig = ''; });
+        panel.appendChild(ab);
+      }
       const row = document.createElement('div');
       row.className = 'info-row';
       if (sel.def.kind !== 'income' && sel.def.kind !== 'support') {

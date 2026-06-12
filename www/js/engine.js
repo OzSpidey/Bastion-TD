@@ -134,6 +134,11 @@ const Music = {
 
 const TARGET_MODES = ['First', 'Last', 'Strong', 'Close'];
 
+// Max-rank towers earn a name. Stats become attachment.
+const VET_NAMES = ['Old Marta', 'Ironjaw', 'The Whisper', 'Big Bess', 'Grudgekeeper', 'Stormcaller',
+  'The Sentinel', 'Wargrin', 'Lastlight', 'Thunderhead', 'The Widow', 'Goldspike',
+  'Ashmaker', 'The Bulwark', 'Nightwatch', 'Hellena', 'The Anvil', 'Skyreaper'];
+
 // ============ Art: sprite overrides + procedural vector fallback ============
 // Drop transparent PNGs at www/assets/towers/<id>.png (top-down, facing right)
 // or www/assets/enemies/<id>.png and they replace the built-in vector art.
@@ -507,6 +512,14 @@ function drawTurret(ctx, t, time) {
 
 function drawTower(ctx, t, time) {
   const accent = TOWER_ACCENT[t.type] || '#fff';
+  if (t.ascended) {
+    const p = 0.6 + 0.4 * Math.sin(time * 3 + t.x * 0.05);
+    const ag = ctx.createRadialGradient(t.x, t.y, 3, t.x, t.y, 26);
+    ag.addColorStop(0, 'rgba(253,230,138,' + (0.28 * p).toFixed(2) + ')');
+    ag.addColorStop(1, 'rgba(253,230,138,0)');
+    ctx.fillStyle = ag;
+    ctx.beginPath(); ctx.arc(t.x, t.y, 26, 0, Math.PI * 2); ctx.fill();
+  }
   const spr = Sprites.towers[t.type];
   if (spr) {
     // sprite art is a 3/4-view building: draw static, never rotate
@@ -708,6 +721,15 @@ function drawEnemy(ctx, e, time) {
   ctx.ellipse(e.x, e.y + r * 0.8 + 2, r * 0.9, r * 0.32, 0, 0, Math.PI * 2);
   ctx.fillStyle = 'rgba(0,0,0,0.35)';
   ctx.fill();
+  if (e.relic) {
+    const bobg = Math.sin(time * 4) * 2;
+    const gg = ctx.createRadialGradient(x, y - r - 16 + bobg, 0.5, x, y - r - 16 + bobg, 9);
+    gg.addColorStop(0, 'rgba(103,232,249,0.8)');
+    gg.addColorStop(1, 'rgba(103,232,249,0)');
+    ctx.fillStyle = gg;
+    ctx.beginPath(); ctx.arc(x, y - r - 16 + bobg, 9, 0, Math.PI * 2); ctx.fill();
+    iceCrystal(ctx, x, y - r - 16 + bobg, 5);
+  }
   if (e.elite) {
     const p = 0.6 + 0.4 * Math.sin(time * 6);
     ctx.strokeStyle = 'rgba(251,191,36,' + (0.55 * p).toFixed(2) + ')';
@@ -1439,6 +1461,7 @@ class Enemy {
     let hpMul = opts.hpMul != null ? opts.hpMul : game.hpScaleFor(game.wave);
     if (game.omenWave && opts.hpMul == null) hpMul *= 1.5;
     this.elite = !!opts.elite;
+    this.relic = !!opts.relic;
     if (this.elite) hpMul *= 2.2;
     this.maxHp = Math.round(this.def.hp * hpMul);
     this.hp = this.maxHp;
@@ -1607,6 +1630,15 @@ class Enemy {
     if (g.omenWave) reward *= 2;
     if (src && src.checkRank) { src.kills++; src.checkRank(); }
     g.registerKill(src);
+    if (this.relic) {
+      const art = BOONS[Math.floor(Math.random() * BOONS.length)];
+      art.apply(g);
+      g.addFx({ type: 'banner', t: 0, dur: 1.6, str: '💎 RELIC: ' + art.name.toUpperCase(), color: '#67e8f9' });
+      g.addFx({ type: 'glowfx', x: this.x, y: this.y, r: 40, rgb: '103,232,249', t: 0, dur: 0.5 });
+      g.sparkBurst(this.x, this.y, 12, '#67e8f9', 200);
+      g.emit('onRelic', art);
+      Sound.play('cash');
+    }
     if (this.elite || g.omenWave) {
       g.addFx({ type: 'text', x: this.x, y: this.y - 16, t: 0, dur: 0.9, str: '+$' + reward, color: '#fbbf24' });
       if (this.elite) g.sparkBurst(this.x, this.y, 8, '#fbbf24', 160);
@@ -1661,6 +1693,9 @@ class Enemy {
   leak() {
     if (this.dead || this.finished) return;
     this.finished = true;
+    if (this.relic) {
+      this.game.addFx({ type: 'text', x: this.x - 30, y: this.y - 16, t: 0, dur: 1.4, str: '💎 Relic lost!', color: '#f87171' });
+    }
     this.game.leak(this);
   }
 }
@@ -1682,6 +1717,7 @@ class Tower {
     this.recoil = 0;
     this.kills = 0;
     this.rank = 0;
+    this.ascended = false;
     this.overchargeT = 0;
     this.ocCd = 0;
     this.resetSyn();
@@ -1714,16 +1750,21 @@ class Tower {
   checkRank() {
     while (this.rank < 3 && this.kills >= Tower.RANK_KILLS[this.rank]) {
       this.rank++;
+      if (this.rank === 3 && !this.vetName) {
+        this.vetName = VET_NAMES[Math.floor(Math.random() * VET_NAMES.length)];
+        this.game.addFx({ type: 'text', x: this.x, y: this.y - 36, t: 0, dur: 1.8, str: '"' + this.vetName + '"', color: '#fde68a' });
+      }
       this.game.addFx({ type: 'text', x: this.x, y: this.y - 24, t: 0, dur: 1.1, str: 'RANK UP ' + '\u2605'.repeat(this.rank), color: '#fbbf24' });
       this.game.addFx({ type: 'ring', x: this.x, y: this.y, t: 0, dur: 0.5, r: 26, color: '#fbbf24' });
       Sound.play('upgrade');
     }
   }
 
-  get effRange() { return this.stats.range * this.game.bonuses.rangeMul * (1 + this.aura.range) * this.syn.rangeMul; }
-  get effDmg() { return this.stats.dmg * this.game.bonuses.dmgMul * (1 + this.aura.dmg) * this.syn.dmgMul * (1 + 0.05 * this.rank); }
+  get effRange() { return this.stats.range * this.game.bonuses.rangeMul * (1 + this.aura.range) * this.syn.rangeMul * (this.ascended ? 1.15 : 1); }
+  get effDmg() { return this.stats.dmg * this.game.bonuses.dmgMul * (1 + this.aura.dmg) * this.syn.dmgMul * (1 + 0.05 * this.rank) * (this.ascended ? 1.3 : 1); }
   get effRate() {
     let r = this.stats.rate / (1 + this.aura.rate) / this.syn.rateMul;
+    if (this.ascended) r *= 0.85;
     if (this.game.overclockT > 0) r *= 0.5;
     if (this.overchargeT > 0) r *= 0.5;
     return r;
@@ -1987,6 +2028,12 @@ class Game {
     this.lives = lives + (this.mode === 'sandbox' ? 0 : this.bonuses.startLives);
     this.modifiers = (opts.modifierIds || []).map(id => MODIFIERS.find(m => m.id === id)).filter(Boolean);
     for (const m of this.modifiers) m.apply(this);
+    this.curses = (opts.curseIds || []).map(id => CURSES.find(c => c.id === id)).filter(Boolean);
+    for (const c of this.curses) c.apply(this);
+    this.lastStandUsed = false;
+    this.hazards = (MAP_HAZARDS[this.map.id] || []).map(([c, r]) => ({
+      x: (c + 0.5) * CELL, y: (r + 0.5) * CELL, cd: 0,
+    }));
     this.startLives = this.lives;
 
     // state
@@ -2072,7 +2119,7 @@ class Game {
 
   // [{type, n}] of the next wave, ordered by first appearance
   previewNextWave() {
-    if (!this.pendingWave) return [];
+    if (!this.pendingWave || this.cursedNoPreview) return [];
     const counts = {}, order = [];
     for (const e of this.pendingWave.entries) {
       if (!(e.type in counts)) { counts[e.type] = 0; order.push(e.type); }
@@ -2145,6 +2192,22 @@ class Game {
     if (buff.chainRangeAdd) t.syn.chainRangeAdd += buff.chainRangeAdd;
     if (buff.slowOnHit) t.syn.slowOnHit = buff.slowOnHit;
     if (buff.poisonOnHit) t.syn.poisonOnHit = buff.poisonOnHit;
+  }
+
+  // ---- ascension: endgame transformation for double-maxed towers ----
+  ascend(t) {
+    const COST = Math.round(800 * this.costMul);
+    if (t.ascended || t.levels[0] < 3 || t.levels[1] < 3 || this.cash < COST) return false;
+    this.cash -= COST;
+    t.ascended = true;
+    t.spent += COST;
+    this.addFx({ type: 'banner', t: 0, dur: 1.6, str: '\u2728 ' + t.def.name.toUpperCase() + ' ASCENDED', color: '#fde68a' });
+    this.addFx({ type: 'ring', x: t.x, y: t.y, t: 0, dur: 0.7, r: 60, color: '#fde68a' });
+    this.addFx({ type: 'glowfx', x: t.x, y: t.y, r: 45, rgb: '253,230,138', t: 0, dur: 0.6 });
+    this.sparkBurst(t.x, t.y, 16, '#fde68a', 200);
+    this.addShake(3);
+    Sound.play('win');
+    return true;
   }
 
   // ---- tap-to-overcharge: active player verb on any combat tower ----
@@ -2316,6 +2379,10 @@ class Game {
         if (!ENEMIES[e2.type].boss && rng() < 0.06) { e2.elite = true; elites++; }
       }
     }
+    if (n >= 6 && rng() < 0.22) {
+      const cands = entries.filter(e2 => !ENEMIES[e2.type].boss);
+      if (cands.length) cands[Math.floor(rng() * cands.length)].relic = true;
+    }
     return entries;
   }
 
@@ -2331,6 +2398,12 @@ class Game {
     this.autoTimer = 0;
     this.wave++;
     this.omenWave = this.wave >= 5 && this.wave % 7 === 0 && this.wave % 10 !== 0;
+    if (this.mode === 'endless' && this.wave > 10 && this.wave % 10 === 1) {
+      const m = MODIFIERS[Math.floor(this.rng() * MODIFIERS.length)];
+      m.apply(this);
+      this.addFx({ type: 'banner', t: 0.9, dur: 2, str: 'MUTATOR: ' + m.name.toUpperCase(), color: '#f0abfc' });
+      this.emit('onMutator', m);
+    }
     // bank income + interest at wave start
     let income = 0, pct = this.bonuses.interest;
     for (const tw of this.towers) { income += tw.stats.income * tw.syn.incomeMul; pct += tw.stats.interestPct; }
@@ -2360,6 +2433,15 @@ class Game {
     this.lives -= enemy.def.lives;
     this.stats.leaks++;
     this.addShake(2.5);
+    if (!this.lastStandUsed && this.lives > 0 && this.lives <= 3) {
+      this.lastStandUsed = true;
+      this.addFx({ type: 'banner', t: 0, dur: 2.2, str: '\u2694 LAST STAND \u2694', color: '#f87171' });
+      this.addFx({ type: 'text', x: COLS * CELL / 2, y: CELL * ROWS * 0.34 + 44, t: 0, dur: 2.6, str: 'All towers overcharged!', color: '#fb923c' });
+      for (const t of this.towers) if (t.def.kind !== 'income' && t.def.kind !== 'support') t.overchargeT = Math.max(t.overchargeT, 8);
+      if (this.hero && this.hero.alive) this.hero.hp = Math.min(this.hero.maxHp, this.hero.hp + this.hero.maxHp * 0.5);
+      this.addShake(5);
+      Sound.play('wave');
+    }
     this.addFx({ type: 'flash', t: 0, dur: 0.25 });
     Sound.play('leak');
     if (this.lives <= 0 && !this.over) { this.lives = 0; this.end(false); }
@@ -2414,6 +2496,24 @@ class Game {
   handleClick(px, py) {
     if (this.over) return;
     if (this.armedAbility === 'airstrike') { this.castAirstrike(px, py); return; }
+    // environmental hazard nodes: tap to erupt
+    for (const hz of this.hazards) {
+      if (dist2(px, py, hz.x, hz.y) > 17 * 17) continue;
+      if (hz.cd > 0 || this.cash < 90) {
+        if (hz.cd <= 0 && this.cash < 90) this.addFx({ type: 'text', x: hz.x, y: hz.y - 20, t: 0, dur: 0.8, str: 'Need $90', color: '#f87171' });
+        return;
+      }
+      this.cash -= 90;
+      hz.cd = 40;
+      this.addShake(4);
+      this.damageArea(hz.x, hz.y, 70, 150);
+      this.addFx({ type: 'boom', x: hz.x, y: hz.y, t: 0, dur: 0.45, r: 70, color: '#fdba74' });
+      this.addFx({ type: 'glowfx', x: hz.x, y: hz.y, r: 75, rgb: '255,160,60', t: 0, dur: 0.4 });
+      this.addGround({ type: 'scorch', x: hz.x, y: hz.y, r: 50, t: 0, dur: 6 });
+      this.sparkBurst(hz.x, hz.y, 14, '#fdba74', 240);
+      Sound.play('boom');
+      return;
+    }
     // hero: click to select, then click anywhere to move
     const h = this.hero;
     if (h && !this.buildType) {
@@ -2480,6 +2580,7 @@ class Game {
         else if (this.mode === 'daily') rp += 40;
       }
     }
+    if (this.curses.length) rp = Math.round(rp * (1 + 0.25 * this.curses.length));
     let stars = 0;
     if (won) {
       stars = this.lives >= this.startLives ? 3 : this.lives >= Math.ceil(this.startLives / 2) ? 2 : 1;
@@ -2495,6 +2596,7 @@ class Game {
     for (const id in this.cds) this.cds[id] = Math.max(0, this.cds[id] - dt);
     if (this.overclockT > 0) this.overclockT -= dt;
     if (this.shakeT > 0) { this.shakeT -= dt; if (this.shakeT <= 0) this.shakeMag = 0; }
+    for (const hz of this.hazards) if (hz.cd > 0) hz.cd -= dt;
 
     if (!this.waveActive && this.autoTimer > 0) {
       this.autoTimer -= dt;
@@ -2505,7 +2607,7 @@ class Game {
       this.waveTime += dt;
       while (this.spawnQueue.length && this.spawnQueue[0].t <= this.waveTime) {
         const s = this.spawnQueue.shift();
-        const ne = new Enemy(this, s.type, { pathIndex: s.pathIndex, elite: s.elite });
+        const ne = new Enemy(this, s.type, { pathIndex: s.pathIndex, elite: s.elite, relic: s.relic });
         if (this.frostSnap && this.waveTime < 3.5) ne.applySlow(0.4, 3.5 - this.waveTime + 0.4);
         this.enemies.push(ne);
       }
@@ -2610,11 +2712,12 @@ class Game {
     if (!s.canAir) lines.push('Cannot hit air');
     if (s.seesStealth) lines.push('Sees stealth');
     if (t.totalDmg > 0) lines.push('Total dealt: ' + (t.totalDmg >= 10000 ? (t.totalDmg / 1000).toFixed(1) + 'k' : Math.round(t.totalDmg)));
+    if (t.ascended) lines.push('\u2728 ASCENDED (+30% dmg, +18% speed, +15% range)');
     if (t.rank > 0) lines.push('Veteran ' + '\u2605'.repeat(t.rank) + '  (' + t.kills + ' kills, +' + (t.rank * 5) + '% dmg)');
     else if (t.kills > 0) lines.push(t.kills + '/' + Tower.RANK_KILLS[0] + ' kills to rank \u2605');
     for (const nm of t.syn.names) lines.push('\ud83d\udd17 ' + nm);
 
-    const title = t.def.name + '  ' + t.levels[0] + '/' + t.levels[1];
+    const title = (t.vetName ? '"' + t.vetName + '" \u00b7 ' : '') + t.def.name + '  ' + t.levels[0] + '/' + t.levels[1];
     ctx.font = 'bold 12px "Segoe UI", sans-serif';
     let w = ctx.measureText(title).width;
     ctx.font = '11px "Segoe UI", sans-serif';
@@ -2869,6 +2972,33 @@ class Game {
         }
       }
       ctx.globalAlpha = 1;
+    }
+
+    // environmental hazard nodes
+    for (const hz of this.hazards) {
+      const ready = hz.cd <= 0;
+      const p = 0.5 + 0.5 * Math.sin(this.time * 4);
+      ctx.beginPath(); ctx.arc(hz.x, hz.y, 13, 0, Math.PI * 2);
+      ctx.fillStyle = ready ? 'rgba(251,146,60,' + (0.18 + 0.12 * p).toFixed(2) + ')' : 'rgba(100,100,110,0.15)';
+      ctx.fill();
+      ctx.strokeStyle = ready ? 'rgba(251,146,60,' + (0.6 + 0.4 * p).toFixed(2) + ')' : 'rgba(120,120,130,0.5)';
+      ctx.lineWidth = 2;
+      if (!ready) {
+        ctx.beginPath(); ctx.arc(hz.x, hz.y, 13, -Math.PI / 2, -Math.PI / 2 + (1 - hz.cd / 40) * Math.PI * 2); ctx.stroke();
+      } else {
+        ctx.beginPath(); ctx.arc(hz.x, hz.y, 13, 0, Math.PI * 2); ctx.stroke();
+      }
+      ctx.lineWidth = 1;
+      ctx.font = '13px serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.globalAlpha = ready ? 1 : 0.5;
+      ctx.fillText('🌀', hz.x, hz.y);
+      ctx.globalAlpha = 1;
+      if (ready && dist2(this.mouse.x, this.mouse.y, hz.x, hz.y) < 17 * 17) {
+        ctx.font = 'bold 11px "Segoe UI", sans-serif';
+        ctx.fillStyle = '#fdba74';
+        ctx.fillText('Eruption $90', hz.x, hz.y - 22);
+      }
     }
 
     // placement grid, only while building
