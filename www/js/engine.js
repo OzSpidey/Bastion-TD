@@ -566,6 +566,14 @@ function drawTurret(ctx, t, time) {
 
 function drawTower(ctx, t, time) {
   const accent = TOWER_ACCENT[t.type] || '#fff';
+  const building = t.buildT > 0;
+  if (building) {
+    const s = t.buildT < 0.1 ? 1.08 : 1 - (t.buildT / 0.45) * 0.5;
+    ctx.save();
+    ctx.translate(t.x, t.y);
+    ctx.scale(s, s);
+    ctx.translate(-t.x, -t.y);
+  }
   if (t.ascended) {
     const p = 0.6 + 0.4 * Math.sin(time * 3 + t.x * 0.05);
     const ag = ctx.createRadialGradient(t.x, t.y, 3, t.x, t.y, 26);
@@ -588,6 +596,7 @@ function drawTower(ctx, t, time) {
   for (let i = 0; i < t.levels[0]; i++) drawGem(ctx, t.x - 13 + i * 6.5, t.y + 15.5, '#4ade80');
   for (let i = 0; i < t.levels[1]; i++) drawGem(ctx, t.x + 13 - i * 6.5, t.y + 19, '#38bdf8');
   if (t.levels[0] >= 3 && t.levels[1] >= 3) drawBanner(ctx, t.x + 15, t.y - 8, accent, time);
+  if (building) ctx.restore();
 }
 
 function drawEnemyBody(ctx, e, x, y, time) {
@@ -2066,6 +2075,7 @@ class Tower {
     this.ascended = false;
     this.overchargeT = 0;
     this.ocCd = 0;
+    this.buildT = 0;
     this.resetSyn();
     this.recompute();
     if (this.def.kind === 'barracks') {
@@ -2155,6 +2165,7 @@ class Tower {
   update(dt) {
     if (this.overchargeT > 0) this.overchargeT -= dt;
     if (this.ocCd > 0) this.ocCd -= dt;
+    if (this.buildT > 0) this.buildT -= dt;
     const k = this.def.kind;
     if (k === 'income' || k === 'support') return;
     if (k === 'barracks') {
@@ -2698,6 +2709,18 @@ class Game {
     this.towerGrid.set(cellKey(c, r), t);
     this.recomputeSynergies();
     if (this.isMaze) this.rebuildFlow();
+    t.buildT = 0.45;
+    // build dust
+    for (let i = 0; i < 6; i++) {
+      this.addParticle({
+        kind: 'smoke', x: t.x + (Math.random() - 0.5) * CELL * 0.8,
+        y: t.y + (Math.random() - 0.5) * CELL * 0.6 + 8,
+        vx: (Math.random() - 0.5) * 24, vy: -14 - Math.random() * 18,
+        size: 3 + Math.random() * 3, t: 0, dur: 0.5 + Math.random() * 0.35,
+      });
+    }
+    this.sparkBurst(t.x, t.y + 6, 4, '#d6c5a1', 120);
+    this.addFx({ type: 'ring', x: t.x, y: t.y, t: 0, dur: 0.4, r: 22, color: '#d6c5a1' });
     Sound.play('build');
     return true;
   }
@@ -2711,6 +2734,16 @@ class Game {
     if (this.selected === t) this.selected = null;
     if (this.isMaze) this.rebuildFlow();
     this.addFx({ type: 'text', x: t.x, y: t.y, t: 0, dur: 0.8, str: '+$' + refund, color: '#fbbf24' });
+    // sell poof
+    for (let i = 0; i < 5; i++) {
+      this.addParticle({
+        kind: 'smoke', x: t.x + (Math.random() - 0.5) * 26,
+        y: t.y + (Math.random() - 0.5) * 20,
+        vx: (Math.random() - 0.5) * 22, vy: -16 - Math.random() * 20,
+        size: 3.5 + Math.random() * 3, t: 0, dur: 0.5 + Math.random() * 0.35,
+      });
+    }
+    this.addFx({ type: 'ring', x: t.x, y: t.y, t: 0, dur: 0.4, r: 22, color: '#9ca3af' });
     Sound.play('sell');
   }
 
@@ -2727,6 +2760,10 @@ class Game {
     // barracks upgrades heal standing militia to the new max
     if (t.militia) for (const m of t.militia) if (m.alive) m.hp = t.stats.mHp;
     if (t.levels[0] >= 3 && t.levels[1] >= 3) this.emit('onAch', 'maxTower');
+    const ucol = p === 0 ? '#4ade80' : '#38bdf8';
+    this.addFx({ type: 'ring', x: t.x, y: t.y, t: 0, dur: 0.45, r: 24, color: ucol });
+    this.sparkBurst(t.x, t.y, 6, ucol, 140);
+    t.buildT = 0.25;
     Sound.play('upgrade');
     return true;
   }
@@ -3030,6 +3067,16 @@ class Game {
         const ne = new Enemy(this, s.type, { pathIndex: s.pathIndex, elite: s.elite, relic: s.relic });
         if (this.frostSnap && this.waveTime < 3.5) ne.applySlow(0.4, 3.5 - this.waveTime + 0.4);
         this.enemies.push(ne);
+        // spawn puff: enemies puff out of the gate
+        for (let i = 0; i < 3; i++) {
+          this.addParticle({
+            kind: 'smoke', x: ne.x + (Math.random() - 0.5) * 14,
+            y: ne.y + (Math.random() - 0.5) * 12,
+            vx: (Math.random() - 0.5) * 20, vy: -10 - Math.random() * 14,
+            size: 3 + Math.random() * 2.5, t: 0, dur: 0.4 + Math.random() * 0.25,
+          });
+        }
+        this.addFx({ type: 'glowfx', x: ne.x, y: ne.y, r: 14, rgb: '120,120,130', t: 0, dur: 0.3 });
       }
     }
 
