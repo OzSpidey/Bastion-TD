@@ -260,3 +260,34 @@ body {
   #abilities-bar .ability-btn { padding: 10px 2px; }
   .upg-btn, .info-row button { padding: 10px 9px; }
 }
+
+/* ===== Hero select strip ===== */
+#hero-strip {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin: 0 0 14px; padding: 10px 12px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+}
+.hs-label { color: var(--dim); font-size: 13px; margin-right: 4px; }
+.hero-chip {
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  padding: 7px 12px; min-width: 104px;
+  background: var(--panel2); color: var(--text);
+  border: 1px solid var(--line); border-radius: 8px; cursor: pointer;
+  transition: border-color .15s, transform .15s;
+}
+.hero-chip:hover { transform: translateY(-2px); border-color: var(--dim); }
+.hero-chip.sel { border-color: var(--gold); box-shadow: 0 0 12px rgba(251, 191, 36, .25); }
+.hc-icon { font-size: 20px; }
+.hc-name { font-size: 12px; font-weight: 600; }
+.hc-title { font-size: 10px; color: var(--dim); }
+
+/* ===== Build tooltip ===== */
+#tt {
+  position: fixed; z-index: 50; max-width: 230px;
+  background: rgba(10, 16, 26, .96); border: 1px solid var(--line);
+  border-radius: 8px; padding: 9px 11px; font-size: 12px;
+  pointer-events: none; box-shadow: 0 6px 18px rgba(0, 0, 0, .5);
+}
+#tt .tt-cost { color: var(--gold); font-size: 11px; }
+#tt .tt-desc { color: var(--dim); margin: 3px 0 5px; }
+#tt .tt-stats { color: var(--text); line-height: 1.45; }

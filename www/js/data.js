@@ -162,6 +162,47 @@ const TOWERS = {
 
 const TOWER_ORDER = ['gunner', 'cannon', 'frost', 'tesla', 'venom', 'sniper', 'missile', 'bank', 'beacon'];
 
+// ============ Heroes ============
+// One hero per match. Walks anywhere, blocks enemies, levels up (kills near
+// him grant XP), auto-casts his ability. armorPct = fraction of contact
+// damage ignored. Sprite override: www/assets/heroes/<id>.png
+const HEROES = {
+  aldric: {
+    name: 'Sir Aldric', title: 'Bastion Knight', icon: '🛡️', color: '#cbd5e1',
+    desc: 'Heavy melee tank. Blocks 3 enemies at once and shrugs off half of all blows.',
+    hp: 340, dmg: 15, rate: 0.9, range: 32, speed: 62, blocks: 3, armorPct: 0.5, regen: 0.03,
+    ability: { name: 'Heroic Slam', cd: 12, desc: 'Slams the ground: heavy damage and a 1.2s stun around him.' },
+  },
+  lyra: {
+    name: 'Lyra Swiftwind', title: 'Windrunner', icon: '🏹', color: '#a3e635',
+    desc: 'Elven archer. Long range, fast arrows, 25% chance to crit for 3x.',
+    hp: 175, dmg: 17, rate: 0.55, range: 155, speed: 88, blocks: 1, armorPct: 0, regen: 0.035, crit: 0.25,
+    ability: { name: 'Arrow Storm', cd: 15, desc: 'Rains 12 arrows on the thickest crowd of enemies.' },
+  },
+  magnus: {
+    name: 'Magnus Pyre', title: 'Battle Mage', icon: '🔥', color: '#fb923c',
+    desc: 'Fire mage. Every bolt explodes in a small blast and sets enemies burning.',
+    hp: 165, dmg: 14, rate: 1.0, range: 135, speed: 70, blocks: 1, armorPct: 0, regen: 0.035,
+    splash: 22, burnDps: 5, burnDur: 2,
+    ability: { name: 'Meteor Call', cd: 18, desc: 'Calls a meteor onto the biggest cluster: huge blast + burn.' },
+  },
+  mercy: {
+    name: 'Sister Mercy', title: 'War Cleric', icon: '✨', color: '#fde68a',
+    desc: 'Holy fighter. Nearby towers attack 10% faster; regenerates quickly.',
+    hp: 230, dmg: 13, rate: 0.8, range: 34, speed: 72, blocks: 1, armorPct: 0.25, regen: 0.05,
+    auraRate: 0.10, auraR: 95,
+    ability: { name: 'Holy Nova', cd: 16, desc: 'Heals herself 30% and blasts + slows every enemy around her.' },
+  },
+  korg: {
+    name: 'Korg Ironhide', title: 'Demolitionist', icon: '💣', color: '#f87171',
+    desc: 'Dwarf grenadier. Lobbed bombs splash and permanently shred 1 armor.',
+    hp: 250, dmg: 18, rate: 1.4, range: 115, speed: 60, blocks: 2, armorPct: 0.25, regen: 0.035,
+    splash: 26, shred: 1,
+    ability: { name: 'Dynamite Belt', cd: 16, desc: 'Scatters 5 bombs around him, each with its own blast.' },
+  },
+};
+const HERO_ORDER = ['aldric', 'lyra', 'magnus', 'mercy', 'korg'];
+
 // wcost = budget cost when the wave generator buys this enemy.
 const ENEMIES = {
   runt:        { name: 'Runt', hp: 22, speed: 55, bounty: 4, lives: 1, radius: 9, color: '#e05c5c', wcost: 4, minWave: 1 },

@@ -6,7 +6,7 @@ let SAVE = loadSave();
 function loadSave() {
   const def = {
     rp: 0, perks: {}, stars: {}, ach: {}, bossKills: 0,
-    bestEndless: 0, bestMaze: 0, sound: true, dailyDone: {},
+    bestEndless: 0, bestMaze: 0, sound: true, dailyDone: {}, hero: 'aldric',
   };
   try {
     const raw = localStorage.getItem(SAVE_KEY);
@@ -125,6 +125,7 @@ function showMaps(mode) {
   };
   $('#maps-title').textContent = titles[mode] + ' — Select Map';
   $('#daily-banner').classList.add('hidden');
+  renderHeroStrip();
   const list = mode === 'campaign' || mode === 'endless' || mode === 'bossrush' ? CAMPAIGN_MAPS
     : mode === 'maze' ? MAZE_MAPS : MAPS;
   const grid = $('#maps-grid');
@@ -173,6 +174,25 @@ function showMaps(mode) {
     grid.appendChild(card);
   });
   show('screen-maps');
+}
+
+// ============ Hero select ============
+function renderHeroStrip() {
+  const strip = $('#hero-strip');
+  strip.innerHTML = '<span class="hs-label">Your hero:</span>';
+  for (const id of HERO_ORDER) {
+    const h = HEROES[id];
+    const b = document.createElement('button');
+    b.className = 'hero-chip' + (SAVE.hero === id ? ' sel' : '');
+    b.innerHTML = `<span class="hc-icon">${h.icon}</span><span class="hc-name">${h.name}</span><span class="hc-title">${h.title}</span>`;
+    b.title = `${h.desc}\n${h.ability.name}: ${h.ability.desc}`;
+    b.addEventListener('click', () => {
+      SAVE.hero = id;
+      saveSave();
+      renderHeroStrip();
+    });
+    strip.appendChild(b);
+  }
 }
 
 // ============ Daily challenge ============
@@ -261,6 +281,7 @@ function startGame(cfg) {
     bonuses: computeBonuses(),
     modifierIds: cfg.modifierIds,
     seed: cfg.seed,
+    heroId: SAVE.hero,
     events: {
       onEnd: handleEnd,
       onWaveCleared: n => {
@@ -348,13 +369,30 @@ function buildBuildBar() {
     const def = TOWERS[id];
     const b = document.createElement('button');
     b.className = 'build-btn';
-    b.title = `${def.name} [${i + 1}] — ${def.desc}`;
     b.innerHTML = `<span class="b-icon">${def.icon}</span><span class="b-name">${def.name}</span><span class="b-cost">$${game.towerCost(id)}</span>`;
-    b.addEventListener('click', () => toggleBuild(id));
+    b.addEventListener('click', () => { toggleBuild(id); hideBuildTip(); });
+    b.addEventListener('mouseenter', () => showBuildTip(b, id, i));
+    b.addEventListener('mouseleave', hideBuildTip);
     bar.appendChild(b);
     buildBtns.push({ id, el: b });
   });
 }
+
+// rich hover tooltip with the exact numbers for a build-bar tower
+function showBuildTip(btn, id, idx) {
+  if (!game) return;
+  const def = TOWERS[id];
+  const stats = new Tower(game, id, -5, -5, 0).stats;
+  const tt = $('#tt');
+  tt.innerHTML = `<b>${def.icon} ${def.name}</b> <span class="tt-cost">$${game.towerCost(id)} · [${idx + 1}]</span>
+    <div class="tt-desc">${def.desc}</div>
+    <div class="tt-stats">${fmtStats(stats, game).split(' · ').join('<br>')}</div>`;
+  tt.classList.remove('hidden');
+  const r = btn.getBoundingClientRect();
+  tt.style.top = Math.min(window.innerHeight - tt.offsetHeight - 8, Math.max(8, r.top)) + 'px';
+  tt.style.left = (r.left - tt.offsetWidth - 10) + 'px';
+}
+function hideBuildTip() { $('#tt').classList.add('hidden'); }
 function toggleBuild(id) {
   if (!game || game.over) return;
   game.selected = null;
@@ -384,6 +422,10 @@ function buildAbilityBar() {
 function fmtStats(s, g) {
   const out = [];
   if (s.dmg > 0) out.push(`Damage ${Math.round(s.dmg * g.bonuses.dmgMul)}`);
+  if (s.rate > 0 && s.dmg > 0) {
+    const dps = s.dmg * g.bonuses.dmgMul * Math.max(s.multishot || 1, 1) * (1 + 2 * (s.critCh || 0)) / s.rate;
+    out.push(`DPS ${Math.round(dps)}`);
+  }
   if (s.range > 0) out.push(`Range ${Math.round(s.range * g.bonuses.rangeMul)}`);
   if (s.rate > 0 && s.dmg > 0) out.push(`Speed ${(1 / s.rate).toFixed(1)}/s`);
   if (s.splash > 0) out.push(`Blast ${Math.round(s.splash)}`);
@@ -405,13 +447,28 @@ function fmtStats(s, g) {
 function refreshInfoPanel() {
   if (!game) return;
   const sel = game.selected;
-  const sig = sel
-    ? `t:${sel.cx},${sel.cy}:${sel.levels[0]}:${sel.levels[1]}:${sel.targetMode}`
-    : (game.buildType ? 'b:' + game.buildType : 'none');
+  const hero = game.selectedHero && game.hero ? game.hero : null;
+  const sig = hero
+    ? `h:${hero.lvl}:${Math.ceil(hero.hp / 10)}:${hero.alive ? 1 : Math.ceil(hero.respawnT)}`
+    : sel
+      ? `t:${sel.cx},${sel.cy}:${sel.levels[0]}:${sel.levels[1]}:${sel.targetMode}`
+      : (game.buildType ? 'b:' + game.buildType : 'none');
   const panel = $('#info-panel');
   if (sig !== infoSig) {
     infoSig = sig;
     panel.innerHTML = '';
+    if (hero) {
+      const h = hero.def;
+      panel.innerHTML = `
+        <h3>${h.icon} ${h.name} <small>Lv ${hero.lvl}</small></h3>
+        <p class="tstats">${hero.alive
+          ? `HP ${Math.ceil(hero.hp)}/${hero.maxHp} · Damage ${Math.round(hero.dmg)} · ${h.blocks > 1 ? 'Blocks ' + h.blocks : 'Blocks 1'}`
+          : `☠ Respawns in ${Math.ceil(hero.respawnT)}s`}</p>
+        <p class="tstats">XP ${Math.floor(hero.xp)}/${hero.xpNeed}</p>
+        <p class="tstats">⚡ <b>${h.ability.name}</b> (auto): ${h.ability.desc}</p>
+        <p class="hint">Click anywhere on the battlefield to move ${h.name.split(' ')[0]}. Right-click to deselect.</p>`;
+      return;
+    }
     if (sel) {
       const head = document.createElement('div');
       head.innerHTML = `<h3>${sel.def.icon} ${sel.def.name}</h3><p class="tstats">${fmtStats(sel.stats, game)}</p>`;
@@ -567,6 +624,7 @@ canvas.addEventListener('contextmenu', ev => {
   if (!game) return;
   game.buildType = null;
   game.selected = null;
+  game.selectedHero = false;
   game.armedAbility = null;
   infoSig = '';
 });
@@ -591,9 +649,16 @@ document.addEventListener('keydown', ev => {
   else if (k === 'u' && game.selected) { if (game.upgrade(game.selected, 0)) infoSig = ''; }
   else if (k === 'i' && game.selected) { if (game.upgrade(game.selected, 1)) infoSig = ''; }
   else if (k === 's' && game.selected) { game.sell(game.selected); infoSig = ''; }
+  else if (k === 'h' && game.hero) {
+    game.selectedHero = true;
+    game.selected = null;
+    game.buildType = null;
+    infoSig = '';
+  }
   else if (k === 'escape') {
     game.buildType = null;
     game.selected = null;
+    game.selectedHero = false;
     game.armedAbility = null;
     infoSig = '';
   }
