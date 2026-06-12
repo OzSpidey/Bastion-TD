@@ -503,6 +503,7 @@ function handleEnd(res) {
   showOverlay(`
     ${confetti}
     <div class="overlay-box ${res.won ? 'win' : 'lose'}">
+      <img class="end-art" src="assets/ui/${res.won ? 'victory' : 'defeat'}.jpg" onerror="this.remove()">
       <h2>${title}</h2>
       ${stars}
       <p>Waves cleared: <b>${res.wavesCleared}</b> · Kills: <b>${res.kills}</b> · Leaks: <b>${res.leaks}</b></p>

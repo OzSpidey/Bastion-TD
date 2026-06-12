@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#0c1118">
 <meta name="mobile-web-app-capable" content="yes">
 <title>Bastion TD</title>
-<link rel="stylesheet" href="style.css?v=9">
+<link rel="stylesheet" href="style.css?v=10">
 </head>
 <body>
 <canvas id="menu-bg"></canvas>
@@ -14,42 +14,59 @@
 
   <!-- ============ MAIN MENU ============ -->
   <div id="screen-menu" class="screen active">
-    <h1 class="title">BASTION <span class="accent">TD</span></h1>
-    <p class="subtitle">Hold the line. Build the maze. Break the horde.</p>
-    <div class="menu-grid">
-      <button class="menu-btn" data-mode="campaign">
-        <span class="mb-icon">🏰</span><span class="mb-name">Campaign</span>
-        <span class="mb-desc">5 maps, 3 difficulties, earn stars</span>
-      </button>
-      <button class="menu-btn" data-mode="endless">
-        <span class="mb-icon">♾️</span><span class="mb-name">Endless</span>
-        <span class="mb-desc">Survive as long as you can</span>
-      </button>
-      <button class="menu-btn" data-mode="maze">
-        <span class="mb-icon">🌀</span><span class="mb-name">Maze</span>
-        <span class="mb-desc">Open field, your towers ARE the maze</span>
-      </button>
-      <button class="menu-btn" data-mode="bossrush">
-        <span class="mb-icon">💀</span><span class="mb-name">Boss Rush</span>
-        <span class="mb-desc">15 waves, every wave has a boss</span>
-      </button>
-      <button class="menu-btn" data-mode="daily">
-        <span class="mb-icon">📅</span><span class="mb-name">Daily Challenge</span>
-        <span class="mb-desc">Seeded map + mutators, new every day</span>
-      </button>
-      <button class="menu-btn" data-mode="sandbox">
-        <span class="mb-icon">🧪</span><span class="mb-name">Sandbox</span>
-        <span class="mb-desc">Unlimited cash, experiment freely</span>
-      </button>
+    <div class="menu-panel">
+      <div class="title-banner">
+        <h1 class="title">BASTION <span class="accent">TD</span></h1>
+      </div>
+      <p class="subtitle">Hold the line. Build the maze. Break the horde.</p>
+      <div class="menu-grid">
+        <button class="menu-btn" data-mode="campaign">
+          <img class="mb-art" src="assets/ui/env_rocky.jpg" alt="">
+          <span class="mb-name">🏰 Campaign</span>
+          <span class="mb-desc">7 maps, 3 difficulties, earn stars</span>
+        </button>
+        <button class="menu-btn" data-mode="endless">
+          <img class="mb-art" src="assets/ui/env_tundra.jpg" alt="">
+          <span class="mb-name">♾️ Endless</span>
+          <span class="mb-desc">Survive as long as you can</span>
+        </button>
+        <button class="menu-btn" data-mode="maze">
+          <img class="mb-art" src="assets/ui/env_crystal.jpg" alt="">
+          <span class="mb-name">🌀 Maze</span>
+          <span class="mb-desc">Open field, your towers ARE the maze</span>
+        </button>
+        <button class="menu-btn" data-mode="bossrush">
+          <img class="mb-art" src="assets/ui/env_swamp.jpg" alt="">
+          <span class="mb-name">💀 Boss Rush</span>
+          <span class="mb-desc">15 waves, every wave has a boss</span>
+        </button>
+        <button class="menu-btn" data-mode="daily">
+          <img class="mb-art" src="assets/ui/env_desert.jpg" alt="">
+          <span class="mb-name">📅 Daily Challenge</span>
+          <span class="mb-desc">Seeded map + mutators, new every day</span>
+        </button>
+        <button class="menu-btn" data-mode="sandbox">
+          <img class="mb-art" src="assets/ui/env_props.jpg" alt="">
+          <span class="mb-name">🧪 Sandbox</span>
+          <span class="mb-desc">Unlimited cash, experiment freely</span>
+        </button>
+      </div>
+      <div class="hero-parade">
+        <img src="assets/heroes/aldric.png?v=2" alt="Sir Aldric" title="Sir Aldric">
+        <img src="assets/heroes/lyra.png?v=2" alt="Lyra" title="Lyra Swiftwind">
+        <img src="assets/heroes/magnus.png?v=2" alt="Magnus" title="Magnus Pyre">
+        <img src="assets/heroes/mercy.png?v=2" alt="Mercy" title="Sister Mercy">
+        <img src="assets/heroes/korg.png?v=2" alt="Korg" title="Korg Ironhide">
+      </div>
+      <div class="menu-row">
+        <button class="flat-btn" id="btn-research">🔬 Research <span id="menu-rp"></span></button>
+        <button class="flat-btn" id="btn-achievements">🏅 Achievements <span id="menu-ach"></span></button>
+        <button class="flat-btn" id="btn-help">❓ How to Play</button>
+        <button class="flat-btn" id="btn-settings">⚙️ Options</button>
+      </div>
+      <div id="menu-quests"></div>
+      <p class="footnote" id="menu-stats"></p>
     </div>
-    <div class="menu-row">
-      <button class="flat-btn" id="btn-research">🔬 Research <span id="menu-rp"></span></button>
-      <button class="flat-btn" id="btn-achievements">🏅 Achievements <span id="menu-ach"></span></button>
-      <button class="flat-btn" id="btn-help">❓ How to Play</button>
-      <button class="flat-btn" id="btn-settings">⚙️ Options</button>
-    </div>
-    <div id="menu-quests"></div>
-    <p class="footnote" id="menu-stats"></p>
   </div>
 
   <!-- ============ MAP SELECT ============ -->
@@ -162,8 +179,8 @@
 <div id="tt" class="hidden"></div>
 <div id="toasts"></div>
 
-<script src="js/data.js?v=9"></script>
-<script src="js/engine.js?v=9"></script>
-<script src="js/main.js?v=9"></script>
+<script src="js/data.js?v=10"></script>
+<script src="js/engine.js?v=10"></script>
+<script src="js/main.js?v=10"></script>
 </body>
 </html>
