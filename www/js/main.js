@@ -128,6 +128,7 @@ function showMaps(mode) {
     campaign: '🏰 Campaign', endless: '♾️ Endless', maze: '🌀 Maze',
     bossrush: '💀 Boss Rush', sandbox: '🧪 Sandbox',
   };
+  if (!SAVE.ironWins) SAVE.ironWins = {};
   $('#maps-title').textContent = titles[mode] + ' — Select Map';
   $('#daily-banner').classList.add('hidden');
   renderHeroStrip();
@@ -164,6 +165,15 @@ function showMaps(mode) {
         row.appendChild(b);
       });
       card.appendChild(row);
+      // Iron challenge: unlocked after any star on this map
+      if (DIFFICULTIES.some(d => (SAVE.stars[map.id + ':' + d.id] || 0) > 0)) {
+        const ib = document.createElement('button');
+        ib.className = 'iron-btn' + (SAVE.ironWins[map.id] ? ' cleared' : '');
+        ib.textContent = (SAVE.ironWins[map.id] ? '\ud83d\udee1 IRON CLEARED' : '\u2694 Iron Challenge');
+        ib.title = '1 life \u00b7 20 waves \u00b7 2 towers banned \u00b7 no commander abilities \u00b7 +60 RP';
+        ib.addEventListener('click', () => startGame({ map, mode: 'iron' }));
+        card.appendChild(ib);
+      }
       if (locked) {
         const lk = document.createElement('p');
         lk.className = 'map-best';
@@ -445,6 +455,10 @@ function startGame(cfg) {
       game.hero.hp = game.hero.maxHp;
     }
   }
+  if (cfg.mode === 'iron') {
+    toast('\u2694 <b>IRON CHALLENGE</b><br>1 life \u00b7 banned: ' +
+      game.bannedTowers.map(t => TOWERS[t].name).join(' & ') + ' \u00b7 no commander abilities');
+  }
   Music.on = SAVE.music;
   Music.start();
   buildBuildBar();
@@ -475,6 +489,13 @@ function handleEnd(res) {
     unlock('first_win');
     if (res.noLeaks) unlock('untouchable');
     if (starsTotal() >= 15) unlock('star_15');
+  }
+  if (gameCfg.mode === 'iron' && res.won) {
+    if (!SAVE.ironWins) SAVE.ironWins = {};
+    if (!SAVE.ironWins[gameCfg.map.id]) {
+      SAVE.ironWins[gameCfg.map.id] = true;
+      toast('\ud83d\udee1 <b>IRON CLEARED: ' + gameCfg.map.name + '</b> \u2014 permanent badge earned!');
+    }
   }
   if (gameCfg.mode === 'daily' && res.won) {
     unlock('daily_win');
@@ -929,6 +950,7 @@ function refreshHUD() {
   for (const { id, el } of buildBtns) {
     el.classList.toggle('selected', game.buildType === id);
     el.classList.toggle('poor', game.cash < game.towerCost(id));
+    el.classList.toggle('banned', game.towerBanned(id));
   }
   for (const a of abilityBtns) {
     const cd = game.cds[a.id];

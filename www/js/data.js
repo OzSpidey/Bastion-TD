@@ -200,8 +200,27 @@ const HEROES = {
     splash: 26, shred: 1,
     ability: { name: 'Dynamite Belt', cd: 16, desc: 'Scatters 5 bombs around him, each with its own blast.' },
   },
+  valora: {
+    name: 'Valora', title: 'Dawnblade', icon: '\u2694\ufe0f', color: '#fcd34d',
+    desc: 'Holy duelist. Deals +50% damage to elites and bosses \u2014 the priority-target killer.',
+    hp: 260, dmg: 22, rate: 1.0, range: 34, speed: 68, blocks: 2, armorPct: 0.35, regen: 0.04, eliteSlayer: 1.5,
+    ability: { name: 'Radiant Smite', cd: 14, desc: 'Holy fire falls on the thickest crowd: heavy damage and a brief stun.' },
+  },
+  grimlock: {
+    name: 'Grimlock', title: 'Granite Golem', icon: '\ud83d\uddff', color: '#a8a29e',
+    desc: 'A living mountain. Blocks 4 enemies at once and shrugs off 60% of all damage. Cannot touch fliers.',
+    hp: 520, dmg: 12, rate: 1.6, range: 36, speed: 45, blocks: 4, armorPct: 0.6, regen: 0.025, splash: 26,
+    ability: { name: 'Tremor', cd: 15, desc: 'Shakes the earth: damage and a 50% slow to everything around him.' },
+  },
+  dorin: {
+    name: 'Dorin', title: 'Wildkeeper', icon: '\ud83d\udc3b', color: '#86efac',
+    desc: 'Druid marksman. Thorn shots mark targets to take +10% damage from all sources.',
+    hp: 190, dmg: 15, rate: 0.8, range: 140, speed: 75, blocks: 1, armorPct: 0.1, regen: 0.04,
+    markOnHit: { pct: 0.10, dur: 2 },
+    ability: { name: 'Root Bind', cd: 16, desc: 'Roots up to 6 nearby enemies in place for 2.5s and poisons them.' },
+  },
 };
-const HERO_ORDER = ['aldric', 'lyra', 'magnus', 'mercy', 'korg'];
+const HERO_ORDER = ['aldric', 'lyra', 'magnus', 'mercy', 'korg', 'valora', 'grimlock', 'dorin'];
 
 // ============ Curse contracts ============
 // Optional pre-match debuffs; each accepted curse pays +25% Research Points.
@@ -298,6 +317,8 @@ const ENEMIES = {
   shellback:   { icon: '🐢', name: 'Shellback', hp: 75, speed: 30, armor: 8, bounty: 14, lives: 2, radius: 12, color: '#8d9db6', wcost: 16, minWave: 14 },
   splitter:    { icon: '🫧', name: 'Splitter', hp: 55, speed: 55, bounty: 10, lives: 2, radius: 11, color: '#e0c95c', wcost: 12, minWave: 16, spawnOnDeath: { type: 'swarmling', count: 3 } },
   juggernaut:  { icon: '🤖', name: 'Juggernaut', hp: 1600, speed: 22, armor: 10, bounty: 150, lives: 10, radius: 18, color: '#ff5577', boss: true, wcost: 0, minWave: 99 },
+  healer:      { icon: '🧙', name: 'Goblin Healer', hp: 70, speed: 52, bounty: 16, lives: 1, radius: 10, color: '#7ec86f', wcost: 18, minWave: 9,
+    healAura: { r: 75, pct: 0.12, cd: 3 } },
   wyvern:      { icon: '🐉', name: 'Wyvern', hp: 1000, speed: 36, flying: true, bounty: 150, lives: 10, radius: 16, color: '#66e0ff', boss: true, wcost: 0, minWave: 99 },
 };
 

@@ -1168,6 +1168,7 @@ class Hero {
     let d = this.dmg;
     const crit = this.def.crit && Math.random() < this.def.crit;
     if (crit) d *= 3;
+    if (this.def.eliteSlayer && (e.elite || e.def.boss)) d *= this.def.eliteSlayer;
     if (this.def.splash) {
       // explosive shot (magnus / korg)
       const sx = e.x, sy = e.y, r = this.def.splash;
@@ -1186,9 +1187,10 @@ class Hero {
       g.sparkBurst(e.x, e.y, crit ? 6 : 3, '#f8fafc', 130, this.heading, 1.6);
       g.addFx({ type: 'glowfx', x: e.x, y: e.y, r: 8, rgb: '255,255,255', t: 0, dur: 0.13 });
     } else {
-      // arrow
+      // arrow / thorn shot
       e.damage(d, { pierce: 1 });
-      g.addFx({ type: 'beam', x1: this.x, y1: this.y - 6, x2: e.x, y2: e.y, t: 0, dur: 0.1, color: crit ? '#fbbf24' : '#d9f99d' });
+      if (this.def.markOnHit) { e.markT = this.def.markOnHit.dur; e.markPct = this.def.markOnHit.pct; }
+      g.addFx({ type: 'beam', x1: this.x, y1: this.y - 6, x2: e.x, y2: e.y, t: 0, dur: 0.1, color: crit ? '#fbbf24' : this.def.markOnHit ? '#86efac' : '#d9f99d' });
       g.sparkBurst(e.x, e.y, crit ? 6 : 2, crit ? '#fbbf24' : '#d9f99d', 120);
       if (crit) g.addFx({ type: 'text', x: e.x, y: e.y - 14, t: 0, dur: 0.6, str: 'CRIT!', color: '#fbbf24' });
     }
@@ -1282,6 +1284,63 @@ class Hero {
         g.addFx({ type: 'glowfx', x: e.x, y: e.y, r: 10, rgb: '253,230,138', t: 0, dur: 0.25 });
       }
       Sound.play('wave');
+      return true;
+    }
+    if (this.id === 'valora') {
+      let best = null, bn = 1;
+      for (const e of g.enemies) {
+        if (e.dead || e.finished || dist2(e.x, e.y, this.x, this.y) > 240 * 240) continue;
+        const n = g.enemies.filter(o => !o.dead && !o.finished && dist2(o.x, o.y, e.x, e.y) < 50 * 50).length;
+        if (n > bn) { bn = n; best = e; }
+      }
+      if (!best || bn < 3) return false;
+      announce();
+      const cx = best.x, cy = best.y;
+      g.addFx({ type: 'beam', x1: cx + 30, y1: cy - 140, x2: cx, y2: cy, t: 0, dur: 0.4, color: '#fde68a' });
+      this.pending.push({ t: 0.35, fn: () => {
+        g.addShake(3);
+        g.addFx({ type: 'glowfx', x: cx, y: cy, r: 50, rgb: '253,230,138', t: 0, dur: 0.4 });
+        g.addFx({ type: 'ring', x: cx, y: cy, t: 0, dur: 0.4, r: 45, color: '#fde68a' });
+        g.sparkBurst(cx, cy, 12, '#fde68a', 200);
+        for (const e of g.enemies) {
+          if (e.dead || e.finished) continue;
+          if (dist2(e.x, e.y, cx, cy) < (45 + e.def.radius) * (45 + e.def.radius)) {
+            e.damage(50 + 10 * lvl, { pierce: 99 });
+            e.stunT = Math.max(e.stunT, 0.8);
+          }
+        }
+        Sound.play('boom');
+      } });
+      return true;
+    }
+    if (this.id === 'grimlock') {
+      const targets = g.enemies.filter(e => !e.dead && !e.finished && !e.def.flying && dist2(e.x, e.y, this.x, this.y) < 90 * 90);
+      if (targets.length < 2) return false;
+      announce();
+      g.addShake(4);
+      g.addFx({ type: 'ring', x: this.x, y: this.y, t: 0, dur: 0.5, r: 90, color: '#a8a29e' });
+      g.addGround({ type: 'scorch', x: this.x, y: this.y, r: 40, t: 0, dur: 3 });
+      for (const e of targets) {
+        e.damage(20 + 5 * lvl, { pierce: 99 });
+        e.applySlow(0.5, 3);
+      }
+      Sound.play('boom');
+      return true;
+    }
+    if (this.id === 'dorin') {
+      const cands = g.enemies
+        .filter(e => !e.dead && !e.finished && !e.def.flying && dist2(e.x, e.y, this.x, this.y) < 150 * 150)
+        .sort((a, b) => b.progress - a.progress)
+        .slice(0, 6);
+      if (cands.length < 2) return false;
+      announce();
+      for (const e of cands) {
+        e.stunT = Math.max(e.stunT, 2.5);
+        e.applyPoison(6, 3, false);
+        g.addFx({ type: 'glowfx', x: e.x, y: e.y, r: 13, rgb: '134,239,172', t: 0, dur: 0.5 });
+        g.addFx({ type: 'text', x: e.x, y: e.y - e.def.radius - 10, t: 0, dur: 1, str: '\ud83c\udf3f', color: '#86efac' });
+      }
+      Sound.play('freeze');
       return true;
     }
     if (this.id === 'korg') {
@@ -1519,6 +1578,28 @@ class Enemy {
     if (this.markT > 0) this.markT -= dt;
     if (this.hitT > 0) this.hitT -= dt;
     if (this.stunT > 0) { this.stunT -= dt; return; }
+
+    // goblin healer: pulse-heals nearby allies (never itself); stuns interrupt
+    if (this.def.healAura) {
+      this.healT = (this.healT == null ? 1.5 : this.healT) - dt;
+      if (this.healT <= 0) {
+        this.healT = this.def.healAura.cd;
+        const hr2 = this.def.healAura.r * this.def.healAura.r;
+        let healed = false;
+        for (const o of g.enemies) {
+          if (o === this || o.dead || o.finished || o.hp >= o.maxHp) continue;
+          if (dist2(o.x, o.y, this.x, this.y) <= hr2) {
+            o.hp = Math.min(o.maxHp, o.hp + o.maxHp * this.def.healAura.pct);
+            g.addFx({ type: 'glowfx', x: o.x, y: o.y, r: 9, rgb: '74,222,128', t: 0, dur: 0.3 });
+            healed = true;
+          }
+        }
+        if (healed) {
+          g.addFx({ type: 'ring', x: this.x, y: this.y, t: 0, dur: 0.45, r: this.def.healAura.r, color: '#4ade80' });
+          Sound.play('cash');
+        }
+      }
+    }
 
     // blocked by the hero: stop and fight
     const hb = g.hero;
@@ -2018,6 +2099,11 @@ class Game {
     if (this.mode === 'campaign') {
       const d = this.difficulty;
       this.totalWaves = d.waves; lives = d.lives; cash = d.cash; this.hpMul = d.hpMul;
+    } else if (this.mode === 'iron') {
+      const d2 = mulberry32(hashStr('iron:' + this.map.id));
+      const pool = TOWER_ORDER.slice();
+      this.bannedTowers = [pool.splice(Math.floor(d2() * pool.length), 1)[0], pool.splice(Math.floor(d2() * pool.length), 1)[0]];
+      this.totalWaves = 20; lives = 1; cash = 320; this.hpMul = 1.15;
     } else if (this.mode === 'bossrush') {
       this.totalWaves = 15; cash = 420;
     } else if (this.mode === 'daily') {
@@ -2270,6 +2356,7 @@ class Game {
 
   // ---- building ----
   towerCost(typeId) { return Math.round(TOWERS[typeId].cost * this.costMul); }
+  towerBanned(typeId) { return this.bannedTowers && this.bannedTowers.includes(typeId); }
 
   canPlace(c, r) {
     if (c < 0 || r < 0 || c >= COLS || r >= ROWS) return false;
@@ -2291,6 +2378,7 @@ class Game {
 
   place(typeId, c, r) {
     const cost = this.towerCost(typeId);
+    if (this.towerBanned(typeId)) return false;
     if (this.cash < cost || !this.canPlace(c, r)) return false;
     this.cash -= cost;
     const t = new Tower(this, typeId, c, r, cost);
@@ -2456,6 +2544,7 @@ class Game {
   }
 
   useAbility(id) {
+    if (this.mode === 'iron') return; // no commander crutches in Iron
     if (this.over || this.cds[id] > 0) return;
     const def = ABILITIES.find(a => a.id === id);
     const cd = def.cd * this.bonuses.cdMul;
@@ -2577,6 +2666,7 @@ class Game {
       rp = cleared;
       if (won) {
         if (this.mode === 'campaign') rp += this.difficulty.rp;
+        else if (this.mode === 'iron') rp += 60;
         else if (this.mode === 'bossrush') rp += 25;
         else if (this.mode === 'daily') rp += 40;
       }
