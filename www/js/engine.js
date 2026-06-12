@@ -150,9 +150,10 @@ const Sprites = {
       img.onload = () => { store[key] = img; };
       img.src = url;
     };
-    for (const id in TOWERS) tryLoad(this.towers, id, 'assets/towers/' + id + '.png');
-    for (const id in ENEMIES) tryLoad(this.enemies, id, 'assets/enemies/' + id + '.png');
-    for (const id in HEROES) tryLoad(this.heroes, id, 'assets/heroes/' + id + '.png');
+    const V = '?v=2'; // bump when sprite art changes to defeat stale caches
+    for (const id in TOWERS) tryLoad(this.towers, id, 'assets/towers/' + id + '.png' + V);
+    for (const id in ENEMIES) tryLoad(this.enemies, id, 'assets/enemies/' + id + '.png' + V);
+    for (const id in HEROES) tryLoad(this.heroes, id, 'assets/heroes/' + id + '.png' + V);
   },
 };
 if (typeof document !== 'undefined') Sprites.load();
