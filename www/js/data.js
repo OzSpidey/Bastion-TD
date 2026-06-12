@@ -401,6 +401,12 @@ const ACHIEVEMENTS = [
   { id: 'max_tower', name: 'Masterwork', icon: '⭐', desc: 'Fully upgrade both paths of one tower' },
   { id: 'daily_win', name: "Today's Hero", icon: '📅', desc: 'Beat a Daily Challenge' },
   { id: 'star_15', name: 'Constellation', icon: '✨', desc: 'Earn 15 campaign stars' },
+  { id: 'iron_1', name: 'Iron Will', icon: '⚔️', desc: 'Clear any Iron Challenge' },
+  { id: 'syn_all', name: 'Grand Architect', icon: '🔗', desc: 'Discover all 12 synergies' },
+  { id: 'ascend_1', name: 'Transcendent', icon: '✴️', desc: 'Ascend a tower into its golden super-form' },
+  { id: 'combo_25', name: 'Massacre', icon: '🩸', desc: 'Reach a 25-kill combo' },
+  { id: 'hero_10', name: 'Living Legend', icon: '🦸', desc: 'Raise any hero to level 10' },
+  { id: 'relic_5', name: 'Relic Hunter', icon: '💎', desc: 'Claim 5 relics (lifetime)' },
 ];
 
 // Daily challenge mutators, two are picked by the date seed.

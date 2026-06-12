@@ -10,6 +10,7 @@ function loadSave() {
     dailyDone: {}, hero: 'aldric', heroXp: {}, dailyStreak: 0, lastDaily: '',
     life: { kills: 0, waves: 0, games: 0, wins: 0 },
     synergiesFound: {}, quests: { date: '', prog: {}, done: {} },
+    autoSend: false, relicsClaimed: 0, endlessRuns: [],
   };
   try {
     const raw = localStorage.getItem(SAVE_KEY);
@@ -130,7 +131,15 @@ function showMaps(mode) {
   };
   if (!SAVE.ironWins) SAVE.ironWins = {};
   $('#maps-title').textContent = titles[mode] + ' — Select Map';
-  $('#daily-banner').classList.add('hidden');
+  const banner = $('#daily-banner');
+  banner.classList.add('hidden');
+  if (mode === 'endless' && (SAVE.endlessRuns || []).length) {
+    banner.innerHTML = '<h4 class="lb-head">🏆 Best runs</h4>' + SAVE.endlessRuns.map((r, i) => {
+      const h = HEROES[r.hero];
+      return `<div class="lb-row"><span class="lb-rank">#${i + 1}</span> ${h ? h.icon : '🦸'} <b>Wave ${r.wave}</b> · ${r.map} <span class="lb-date">${r.date}</span></div>`;
+    }).join('');
+    banner.classList.remove('hidden');
+  }
   renderHeroStrip();
   renderCurseStrip();
   const list = mode === 'campaign' || mode === 'endless' || mode === 'bossrush' ? CAMPAIGN_MAPS
@@ -412,7 +421,12 @@ function startGame(cfg) {
       onEnd: handleEnd,
       onWave: () => announceNewEnemies(),
       onBoonDraft: () => showBoonDraft(),
-      onRelic: art => toast(`\ud83d\udc8e <b>Relic claimed: ${art.name}</b><br>${art.desc}`),
+      onRelic: art => {
+        toast(`\ud83d\udc8e <b>Relic claimed: ${art.name}</b><br>${art.desc}`);
+        SAVE.relicsClaimed = (SAVE.relicsClaimed || 0) + 1;
+        saveSave();
+        if (SAVE.relicsClaimed >= 5) unlock('relic_5');
+      },
       onMutator: m => toast(`\ud83c\udf00 <b>Endless mutator: ${m.name}</b><br>${m.desc}`),
       onSynergy: names => {
         for (const nm of names) {
@@ -422,6 +436,7 @@ function startGame(cfg) {
           const found = Object.keys(SAVE.synergiesFound).length;
           toast(`🔗 <b>Synergy discovered (${found}/${SYNERGIES.length}): ${nm}</b><br>${sy.desc}`);
           saveSave();
+          if (found >= SYNERGIES.length) unlock('syn_all');
         }
       },
       onWaveCleared: n => {
@@ -445,6 +460,8 @@ function startGame(cfg) {
       },
     },
   });
+  game.autoSend = !!SAVE.autoSend;
+  ascendSeen = false;
   // restore the hero's persistent level
   if (game.hero) {
     const hx = SAVE.heroXp[SAVE.hero];
@@ -496,7 +513,23 @@ function handleEnd(res) {
       SAVE.ironWins[gameCfg.map.id] = true;
       toast('\ud83d\udee1 <b>IRON CLEARED: ' + gameCfg.map.name + '</b> \u2014 permanent badge earned!');
     }
+    unlock('iron_1');
   }
+  if (gameCfg.mode === 'endless' && res.wavesCleared > 0) {
+    if (!SAVE.endlessRuns) SAVE.endlessRuns = [];
+    SAVE.endlessRuns.push({
+      wave: res.wavesCleared, map: gameCfg.map.name, hero: SAVE.hero,
+      date: new Date().toISOString().slice(0, 10),
+    });
+    SAVE.endlessRuns.sort((a, b) => b.wave - a.wave);
+    SAVE.endlessRuns = SAVE.endlessRuns.slice(0, 5);
+  }
+  if (game) {
+    if (game.towers.some(t => t.ascended)) unlock('ascend_1');
+    if (game.stats.bestCombo >= 25) unlock('combo_25');
+    if (game.hero && game.hero.lvl >= 10) unlock('hero_10');
+  }
+  if (HERO_ORDER.some(id => SAVE.heroXp[id] && SAVE.heroXp[id].lvl >= 10)) unlock('hero_10');
   if (gameCfg.mode === 'daily' && res.won) {
     unlock('daily_win');
     if (!SAVE.dailyDone[gameCfg.dateStr]) {
@@ -925,8 +958,13 @@ function renderQuests() {
 }
 
 // ---- HUD ----
+let ascendSeen = false; // per-game flag so the achievement check runs at most once
 function refreshHUD() {
   if (!game) return;
+  if (!ascendSeen && game.towers.some(t => t.ascended)) {
+    ascendSeen = true;
+    unlock('ascend_1');
+  }
   $('#hud-lives').textContent = `❤️ ${game.lives}`;
   $('#hud-cash').textContent = `💰 ${Math.floor(game.cash)}`;
   $('#hud-wave').textContent = `🌊 ${game.wave}${game.totalWaves ? '/' + game.totalWaves : ''}`;
@@ -963,6 +1001,13 @@ function refreshHUD() {
 
 // ---- HUD buttons ----
 $('#btn-sendwave').addEventListener('click', () => game && game.startWave());
+$('#btn-autosend').classList.toggle('on', !!SAVE.autoSend);
+$('#btn-autosend').addEventListener('click', () => {
+  SAVE.autoSend = !SAVE.autoSend;
+  if (game) game.autoSend = SAVE.autoSend;
+  $('#btn-autosend').classList.toggle('on', SAVE.autoSend);
+  saveSave();
+});
 $('#btn-speed').addEventListener('click', () => { speedIdx = (speedIdx + 1) % SPEEDS.length; });
 $('#btn-pause').addEventListener('click', togglePause);
 $('#btn-sound').addEventListener('click', () => {
@@ -1056,6 +1101,7 @@ document.addEventListener('keydown', ev => {
   else if (k === 'u' && game.selected) { if (game.upgrade(game.selected, 0)) infoSig = ''; }
   else if (k === 'i' && game.selected) { if (game.upgrade(game.selected, 1)) infoSig = ''; }
   else if (k === 's' && game.selected) { game.sell(game.selected); infoSig = ''; }
+  else if (k === 'o' && game.selected) { game.overchargeTower(game.selected); }
   else if (k === 'h' && game.hero) {
     game.selectedHero = true;
     game.selected = null;

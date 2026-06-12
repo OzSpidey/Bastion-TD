@@ -96,6 +96,10 @@ body {
   background: var(--panel); border: 1px solid var(--gold); border-radius: 10px;
   padding: 12px 16px; margin-bottom: 14px; font-size: 14px;
 }
+#daily-banner .lb-head { margin: 0 0 6px; color: var(--gold); font-size: 14px; }
+#daily-banner .lb-row { padding: 2px 0; font-size: 13px; }
+#daily-banner .lb-rank { color: var(--dim); display: inline-block; min-width: 24px; }
+#daily-banner .lb-date { color: var(--dim); font-size: 11px; margin-left: 6px; }
 
 /* ===== Research ===== */
 #perks-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 12px; }
@@ -149,6 +153,7 @@ body {
   border-radius: 7px; padding: 6px 12px; cursor: pointer; font-size: 14px; min-width: 44px;
 }
 .hud-btn:hover { border-color: var(--accent2); }
+.hud-btn.on { background: #14532d; border-color: var(--accent); color: var(--accent); }
 .send-btn {
   background: #14532d; border: 1px solid var(--accent); color: var(--accent);
   border-radius: 7px; padding: 6px 14px; cursor: pointer; font-size: 14px; font-weight: 600;

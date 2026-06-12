@@ -2128,6 +2128,7 @@ class Game {
     this.waveActive = false;
     this.waveTime = 0;
     this.autoTimer = 0; // 0 = waiting for player to send first wave
+    this.autoSend = false; // when on, between-wave countdown shrinks to 2s
     this.enemies = [];
     this.towers = [];
     this.towerGrid = new Map();
@@ -2770,7 +2771,7 @@ class Game {
       this.emit('onWaveCleared', this.wave);
       if (this.wave % 5 === 0 && this.mode !== 'sandbox' && !this.over) this.emit('onBoonDraft', this.wave);
       if (this.totalWaves && this.wave >= this.totalWaves) { this.end(true); return; }
-      this.autoTimer = 12;
+      this.autoTimer = this.autoSend ? 2 : 12;
     }
   }
 

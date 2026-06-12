@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#0c1118">
 <meta name="mobile-web-app-capable" content="yes">
 <title>Bastion TD</title>
-<link rel="stylesheet" href="style.css?v=11">
+<link rel="stylesheet" href="style.css?v=12">
 </head>
 <body>
 <canvas id="menu-bg"></canvas>
@@ -142,7 +142,7 @@
       <h3>Abilities</h3>
       <p>Three commander abilities on cooldown: <b>Airstrike</b> (click target), <b>Frost Nova</b> (global slow) and <b>Overclock</b> (all towers fire 2x faster).</p>
       <h3>Hotkeys</h3>
-      <p><kbd>1</kbd>–<kbd>9</kbd> pick tower · <kbd>Space</kbd> pause · <kbd>F</kbd> game speed · <kbd>N</kbd> send next wave · <kbd>U</kbd>/<kbd>I</kbd> upgrade selected · <kbd>T</kbd> targeting · <kbd>S</kbd> sell · <kbd>Esc</kbd> deselect</p>
+      <p><kbd>1</kbd>–<kbd>9</kbd> pick tower · <kbd>Space</kbd> pause · <kbd>F</kbd> game speed · <kbd>N</kbd> send next wave · <kbd>U</kbd>/<kbd>I</kbd> upgrade selected · <kbd>T</kbd> targeting · <kbd>O</kbd> overcharge selected · <kbd>S</kbd> sell · <kbd>Esc</kbd> deselect</p>
       <h3>Research</h3>
       <p>Every cleared wave earns Research Points. Spend them in the Research Lab on permanent perks: more cash, more lives, stronger towers, interest income and faster abilities.</p>
     </div>
@@ -155,6 +155,7 @@
       <span class="stat" id="hud-cash">💰 200</span>
       <span class="stat" id="hud-wave">🌊 0/30</span>
       <button id="btn-sendwave" class="send-btn">▶ Send Wave</button>
+      <button class="hud-btn" id="btn-autosend" title="Auto-send: next wave starts 2s after a clear">⏩ Auto</button>
       <span id="wave-preview"></span>
       <span class="spacer"></span>
       <button class="hud-btn" id="btn-speed">1×</button>
@@ -181,8 +182,8 @@
 <div id="tt" class="hidden"></div>
 <div id="toasts"></div>
 
-<script src="js/data.js?v=11"></script>
-<script src="js/engine.js?v=11"></script>
-<script src="js/main.js?v=11"></script>
+<script src="js/data.js?v=12"></script>
+<script src="js/engine.js?v=12"></script>
+<script src="js/main.js?v=12"></script>
 </body>
 </html>
