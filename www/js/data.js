@@ -247,6 +247,16 @@ const MAPS = [
     desc: 'Two spawn gates, one exit. Funnel them together.',
     spawns: [[0, 3], [0, 8]], exit: [19, 6],
     blocked: [[10, 0], [10, 1], [10, 10], [10, 11], [5, 5], [5, 6], [15, 5], [15, 6]] },
+  { id: 'oasis', name: 'Sunken Oasis', type: 'path', diffStars: 2, theme: 'oasis',
+    desc: 'A winding caravan trail between the dunes and pools.',
+    paths: [[[-1, 3], [5, 3], [5, 8], [10, 8], [10, 2], [15, 2], [15, 6], [20, 6]]] },
+  { id: 'cinderpeak', name: 'Cinder Peak', type: 'path', diffStars: 4, theme: 'volcanic',
+    desc: 'Molten ground and tight corners. The hardest road.',
+    paths: [[[-1, 10], [3, 10], [3, 5], [7, 5], [7, 9], [12, 9], [12, 4], [16, 4], [16, 8], [20, 8]]] },
+  { id: 'ashworks', name: 'The Ashworks', type: 'maze', diffStars: 4, theme: 'volcanic',
+    desc: 'Open volcanic field. Forge a maze between the vents.',
+    spawns: [[0, 2], [0, 9]], exit: [19, 5],
+    blocked: [[7, 4], [7, 5], [7, 6], [13, 5], [13, 6], [13, 7], [4, 0], [4, 1], [16, 10], [16, 11]] },
 ];
 
 const CAMPAIGN_MAPS = MAPS.filter(m => m.type === 'path');

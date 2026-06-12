@@ -6,9 +6,10 @@
 <meta name="theme-color" content="#0c1118">
 <meta name="mobile-web-app-capable" content="yes">
 <title>Bastion TD</title>
-<link rel="stylesheet" href="style.css?v=4">
+<link rel="stylesheet" href="style.css?v=5">
 </head>
 <body>
+<canvas id="menu-bg"></canvas>
 <div id="app">
 
   <!-- ============ MAIN MENU ============ -->
@@ -45,6 +46,7 @@
       <button class="flat-btn" id="btn-research">🔬 Research <span id="menu-rp"></span></button>
       <button class="flat-btn" id="btn-achievements">🏅 Achievements <span id="menu-ach"></span></button>
       <button class="flat-btn" id="btn-help">❓ How to Play</button>
+      <button class="flat-btn" id="btn-settings">⚙️ Options</button>
     </div>
     <p class="footnote" id="menu-stats"></p>
   </div>
@@ -78,6 +80,20 @@
       <h2>🏅 Achievements</h2>
     </div>
     <div id="ach-grid"></div>
+  </div>
+
+  <!-- ============ SETTINGS ============ -->
+  <div id="screen-settings" class="screen">
+    <div class="screen-head">
+      <button class="flat-btn back-btn" data-back>← Back</button>
+      <h2>⚙️ Options</h2>
+    </div>
+    <div id="settings-list"></div>
+    <h2 class="stats-head">📊 Lifetime Statistics</h2>
+    <div id="stats-grid"></div>
+    <div class="danger-zone">
+      <button id="btn-reset" class="flat-btn danger">🗑 Reset all progress</button>
+    </div>
   </div>
 
   <!-- ============ HELP ============ -->
@@ -139,8 +155,8 @@
 <div id="tt" class="hidden"></div>
 <div id="toasts"></div>
 
-<script src="js/data.js?v=4"></script>
-<script src="js/engine.js?v=4"></script>
-<script src="js/main.js?v=4"></script>
+<script src="js/data.js?v=5"></script>
+<script src="js/engine.js?v=5"></script>
+<script src="js/main.js?v=5"></script>
 </body>
 </html>

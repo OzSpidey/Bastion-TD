@@ -799,6 +799,28 @@ const THEMES = {
     flowers: ['#bde0fe', '#e2eafc', '#a2d2ff'],
     tuft: '#8fa8bc',
   },
+  volcanic: {
+    ground: ['#4a3f3c', '#3c322f', '#2e2624'],
+    mottle: ['#5a4b46', '#251d1b', '#6b554d', '#1f1715'],
+    blade: 'rgba(15,8,5,0.30)', bladeLight: 'rgba(255,140,60,0.08)',
+    pathEdge: '#1c1412', path: '#3a2e29', pathLight: '#4d3b32', pathSpeck: '#f97316',
+    rock: ['#6e5d55', '#453833'],
+    canopy: ['#3a2e29', '#2c2220', '#4a3a32'], trunk: '#1f1715', dead: true,
+    flowers: ['#fb923c', '#f97316', '#fbbf24'],
+    glow: true, lava: true,
+    tuft: '#574740',
+  },
+  oasis: {
+    ground: ['#e8c882', '#dcb96e', '#cda75c'],
+    mottle: ['#f2d795', '#bf9a50', '#f8e3aa', '#b08c45'],
+    blade: 'rgba(140,100,40,0.20)', bladeLight: 'rgba(255,245,210,0.20)',
+    pathEdge: '#8f6f3e', path: '#c2a063', pathLight: '#d4b475', pathSpeck: '#7d5f33',
+    rock: ['#cbb083', '#937b55'],
+    canopy: ['#3f9142', '#2f7a35', '#54a857'], trunk: '#8a6238', palm: true,
+    flowers: ['#f72585', '#ffd166', '#f4f1de'],
+    water: true,
+    tuft: '#7d8f3e',
+  },
   twilight: {
     ground: ['#3c4a63', '#33405a', '#2a364e'],
     mottle: ['#475a78', '#283349', '#52688a', '#222c40'],
@@ -867,6 +889,33 @@ function drawBoulder(x, px, py, s, theme) {
 function drawTree(x, px, py, theme, rng) {
   x.fillStyle = 'rgba(0,0,0,0.28)';
   x.beginPath(); x.ellipse(px + 2, py + 7, 11, 4.5, 0, 0, Math.PI * 2); x.fill();
+  if (theme.dead) {
+    // charred leafless tree with an ember
+    x.strokeStyle = theme.trunk; x.lineWidth = 2.4;
+    x.beginPath(); x.moveTo(px, py + 7); x.quadraticCurveTo(px + 2, py - 4, px - 1, py - 13); x.stroke();
+    x.lineWidth = 1.5;
+    x.beginPath(); x.moveTo(px + 1, py - 3); x.lineTo(px + 7, py - 10); x.stroke();
+    x.beginPath(); x.moveTo(px, py - 8); x.lineTo(px - 6, py - 14); x.stroke();
+    x.lineWidth = 1;
+    x.fillStyle = 'rgba(251,146,60,0.9)';
+    x.beginPath(); x.arc(px + 7, py - 10, 1.3, 0, Math.PI * 2); x.fill();
+    return;
+  }
+  if (theme.palm) {
+    x.strokeStyle = theme.trunk; x.lineWidth = 3;
+    x.beginPath(); x.moveTo(px - 2, py + 7); x.quadraticCurveTo(px + 3, py - 2, px + 2, py - 10); x.stroke();
+    x.lineWidth = 1.6;
+    for (let i = 0; i < 5; i++) {
+      const a = -Math.PI / 2 + (i - 2) * 0.55;
+      x.strokeStyle = theme.canopy[i % 3];
+      x.beginPath();
+      x.moveTo(px + 2, py - 10);
+      x.quadraticCurveTo(px + 2 + Math.cos(a) * 8, py - 10 + Math.sin(a) * 8 - 3, px + 2 + Math.cos(a) * 13, py - 10 + Math.sin(a) * 13 + 3);
+      x.stroke();
+    }
+    x.lineWidth = 1;
+    return;
+  }
   if (theme.snowCap) {
     x.fillStyle = theme.trunk;
     x.fillRect(px - 1.5, py + 2, 3, 6);
@@ -2521,6 +2570,43 @@ class Game {
         }
       }
       x.globalAlpha = 1;
+    }
+
+    // theme set-pieces: glowing lava cracks / desert pools
+    if (theme.lava) {
+      for (let i = 0; i < 14; i++) {
+        let lx = rng() * W, ly = rng() * H;
+        const glow = x.createRadialGradient(lx, ly, 1, lx, ly, 16);
+        glow.addColorStop(0, 'rgba(249,115,22,0.30)');
+        glow.addColorStop(1, 'rgba(249,115,22,0)');
+        x.fillStyle = glow;
+        x.beginPath(); x.arc(lx, ly, 16, 0, Math.PI * 2); x.fill();
+        x.strokeStyle = 'rgba(251,146,60,0.85)';
+        x.lineWidth = 1.6;
+        x.beginPath();
+        x.moveTo(lx, ly);
+        for (let s2 = 0; s2 < 4; s2++) {
+          lx += (rng() - 0.5) * 22; ly += (rng() - 0.5) * 14;
+          x.lineTo(lx, ly);
+        }
+        x.stroke();
+        x.lineWidth = 1;
+      }
+    }
+    if (theme.water) {
+      for (let i = 0; i < 5; i++) {
+        const wx = 40 + rng() * (W - 80), wy = 30 + rng() * (H - 60);
+        const wr = 14 + rng() * 14;
+        x.fillStyle = '#8f6f3e';
+        x.beginPath(); x.ellipse(wx, wy + 2, wr + 3, wr * 0.62 + 3, 0, 0, Math.PI * 2); x.fill();
+        const wg = x.createRadialGradient(wx - wr * 0.3, wy - wr * 0.2, 2, wx, wy, wr);
+        wg.addColorStop(0, '#7dd3fc');
+        wg.addColorStop(1, '#0e7490');
+        x.fillStyle = wg;
+        x.beginPath(); x.ellipse(wx, wy, wr, wr * 0.6, 0, 0, Math.PI * 2); x.fill();
+        x.strokeStyle = 'rgba(255,255,255,0.35)';
+        x.beginPath(); x.ellipse(wx - wr * 0.2, wy - wr * 0.15, wr * 0.45, wr * 0.2, 0.3, 0, Math.PI * 2); x.stroke();
+      }
     }
 
     // decor scatter on free cells (cosmetic, towers plop right on top)

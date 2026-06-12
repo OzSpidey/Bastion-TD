@@ -263,6 +263,90 @@ function renderAch() {
   }
 }
 
+// ============ Settings & stats ============
+const SETTING_DEFS = [
+  ['sound', '🔊 Sound effects'],
+  ['music', '🎵 Music'],
+  ['shake', '💥 Screen shake'],
+  ['dmgNums', '🔢 Damage numbers'],
+];
+function renderSettings() {
+  const list = $('#settings-list');
+  list.innerHTML = '';
+  for (const [key, label] of SETTING_DEFS) {
+    const row = document.createElement('div');
+    row.className = 'setting-row';
+    const b = document.createElement('button');
+    b.className = 'toggle' + (SAVE[key] ? ' on' : '');
+    b.textContent = SAVE[key] ? 'ON' : 'OFF';
+    b.addEventListener('click', () => {
+      SAVE[key] = !SAVE[key];
+      if (key === 'sound') Sound.on = SAVE.sound;
+      if (key === 'music') { Music.on = SAVE.music; if (SAVE.music) Music.start(); else Music.stop(); }
+      if (game) game.settings = { shake: SAVE.shake, dmgNums: SAVE.dmgNums };
+      saveSave();
+      renderSettings();
+    });
+    row.innerHTML = `<span>${label}</span>`;
+    row.appendChild(b);
+    list.appendChild(row);
+  }
+  const L = SAVE.life || { kills: 0, waves: 0, games: 0, wins: 0 };
+  const heroLvls = HERO_ORDER.map(id => (SAVE.heroXp[id] && SAVE.heroXp[id].lvl) || 1).reduce((a, b) => a + b, 0);
+  $('#stats-grid').innerHTML = [
+    ['⚔️ Enemies slain', L.kills], ['🌊 Waves cleared', L.waves],
+    ['🎮 Games played', L.games], ['🏆 Victories', L.wins],
+    ['💀 Bosses killed', SAVE.bossKills], ['⭐ Stars earned', starsTotal()],
+    ['🔬 Research points earned', SAVE.rp], ['🦸 Total hero levels', heroLvls],
+    ['♾️ Best endless wave', SAVE.bestEndless || 0], ['🌀 Best maze wave', SAVE.bestMaze || 0],
+  ].map(([k, v]) => `<div class="stat-card"><div class="sc-num">${v}</div><div class="sc-label">${k}</div></div>`).join('');
+}
+$('#btn-settings').addEventListener('click', () => { renderSettings(); show('screen-settings'); });
+$('#btn-reset').addEventListener('click', () => {
+  if (!confirm('Delete ALL progress: stars, research, hero levels, achievements?')) return;
+  if (!confirm('Are you really sure? This cannot be undone.')) return;
+  localStorage.removeItem(SAVE_KEY);
+  location.reload();
+});
+
+// ---- animated menu background: drifting embers over a dark gradient ----
+const bgCanvas = $('#menu-bg');
+const bgCtx = bgCanvas.getContext('2d');
+const bgParticles = [];
+for (let i = 0; i < 70; i++) {
+  bgParticles.push({
+    x: Math.random(), y: Math.random(), r: 0.6 + Math.random() * 2.2,
+    vy: 0.006 + Math.random() * 0.02, vx: (Math.random() - 0.5) * 0.008,
+    hue: Math.random() < 0.6 ? '74,222,128' : Math.random() < 0.5 ? '56,189,248' : '251,191,36',
+    a: 0.15 + Math.random() * 0.4, ph: Math.random() * Math.PI * 2,
+  });
+}
+function drawMenuBg(t) {
+  const w = bgCanvas.width = window.innerWidth;
+  const h = bgCanvas.height = window.innerHeight;
+  const g = bgCtx.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, '#0d1420');
+  g.addColorStop(0.6, '#0c1118');
+  g.addColorStop(1, '#0a1622');
+  bgCtx.fillStyle = g;
+  bgCtx.fillRect(0, 0, w, h);
+  const glow = bgCtx.createRadialGradient(w / 2, h * 0.25, 50, w / 2, h * 0.25, h * 0.8);
+  glow.addColorStop(0, 'rgba(74,222,128,0.05)');
+  glow.addColorStop(1, 'rgba(74,222,128,0)');
+  bgCtx.fillStyle = glow;
+  bgCtx.fillRect(0, 0, w, h);
+  for (const p of bgParticles) {
+    p.y -= p.vy * 0.016 * 60 / 60;
+    p.x += p.vx + Math.sin(t * 0.001 + p.ph) * 0.0004;
+    if (p.y < -0.02) { p.y = 1.02; p.x = Math.random(); }
+    const tw = 0.6 + 0.4 * Math.sin(t * 0.002 + p.ph * 3);
+    bgCtx.fillStyle = `rgba(${p.hue},${(p.a * tw).toFixed(2)})`;
+    bgCtx.beginPath();
+    bgCtx.arc(p.x * w, p.y * h, p.r, 0, Math.PI * 2);
+    bgCtx.fill();
+  }
+}
+
 // ============ Game session ============
 let game = null;
 let gameCfg = null;
@@ -369,9 +453,17 @@ function handleEnd(res) {
   }
   saveSave();
   const title = res.won ? '🏆 VICTORY' : '💀 DEFEAT';
-  const stars = gameCfg.mode === 'campaign' && res.won ? `<div class="stars">${'★'.repeat(res.stars)}${'☆'.repeat(3 - res.stars)}</div>` : '';
+  const stars = gameCfg.mode === 'campaign' && res.won
+    ? `<div class="stars">${[0, 1, 2].map(i =>
+        `<span class="star${i < res.stars ? ' on' : ''}" style="animation-delay:${0.35 + i * 0.3}s">★</span>`).join('')}</div>`
+    : '';
+  const confetti = res.won
+    ? '<div class="confetti">' + Array.from({ length: 26 }, (_, i) =>
+        `<i style="left:${Math.random() * 100}%;background:${['#4ade80', '#38bdf8', '#fbbf24', '#f87171', '#c084fc'][i % 5]};animation-delay:${Math.random() * 1.2}s;animation-duration:${1.6 + Math.random() * 1.4}s"></i>`).join('') + '</div>'
+    : '';
   showOverlay(`
-    <div class="overlay-box">
+    ${confetti}
+    <div class="overlay-box ${res.won ? 'win' : 'lose'}">
       <h2>${title}</h2>
       ${stars}
       <p>Waves cleared: <b>${res.wavesCleared}</b> · Kills: <b>${res.kills}</b> · Leaks: <b>${res.leaks}</b></p>
@@ -799,7 +891,7 @@ function loop(now) {
   requestAnimationFrame(loop);
   acc += Math.min(0.25, (now - last) / 1000);
   last = now;
-  if (!game) { acc = 0; return; }
+  if (!game) { acc = 0; drawMenuBg(now); return; }
   while (acc >= STEP) {
     for (let i = 0; i < SPEEDS[speedIdx]; i++) game.update(STEP);
     acc -= STEP;
