@@ -382,7 +382,7 @@ body {
   #canvas-wrap { width: 100%; }
   #canvas { width: 100%; height: auto; }
   #sidebar { width: 100% !important; max-width: none !important; }
-  #build-bar { display: grid !important; grid-template-columns: repeat(9, 1fr); }
+  #build-bar { display: grid !important; grid-template-columns: repeat(5, 1fr); }
   .build-btn { min-width: 0 !important; }
   #abilities-bar { display: flex; }
   .ability-btn { flex: 1; }

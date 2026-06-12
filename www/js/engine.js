@@ -153,6 +153,7 @@ const Sprites = {
     };
     const V = '?v=2'; // bump when sprite art changes to defeat stale caches
     for (const id in TOWERS) tryLoad(this.towers, id, 'assets/towers/' + id + '.png' + V);
+    tryLoad(this.towers, 'militia', 'assets/towers/militia.png' + V);
     for (const id in ENEMIES) tryLoad(this.enemies, id, 'assets/enemies/' + id + '.png' + V);
     for (const id in HEROES) tryLoad(this.heroes, id, 'assets/heroes/' + id + '.png' + V);
   },
@@ -162,6 +163,7 @@ if (typeof document !== 'undefined') Sprites.load();
 const TOWER_ACCENT = {
   gunner: '#cbd5e1', cannon: '#f87171', frost: '#7dd3fc', tesla: '#c084fc',
   venom: '#a3e635', sniper: '#fde68a', missile: '#fb923c', bank: '#fbbf24', beacon: '#4ade80',
+  barracks: '#f8fafc',
 };
 
 function shade(hex, amt) {
@@ -479,6 +481,37 @@ function drawTurret(ctx, t, time) {
       ctx.font = 'bold 7px sans-serif';
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText('$', 0, 3.4 + bob);
+      break;
+    }
+    case 'barracks': {
+      // small stone fort with a waving pennant
+      const wg = ctx.createLinearGradient(0, -8, 0, 10);
+      wg.addColorStop(0, '#8b97a7'); wg.addColorStop(1, '#4a5563');
+      ctx.fillStyle = wg;
+      ctx.fillRect(-10, -5, 20, 14);
+      ctx.strokeStyle = 'rgba(15,23,42,0.5)';
+      ctx.strokeRect(-10, -5, 20, 14);
+      // crenellations
+      ctx.fillStyle = '#a9b4c2';
+      for (let i = -10; i < 10; i += 5) ctx.fillRect(i, -8, 3, 4);
+      // stone seams
+      ctx.strokeStyle = 'rgba(15,23,42,0.25)';
+      ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(10, 0); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-10, 4.5); ctx.lineTo(10, 4.5); ctx.stroke();
+      // arched door
+      ctx.fillStyle = '#2a1f12';
+      ctx.beginPath(); ctx.arc(0, 5, 3.6, Math.PI, 0); ctx.lineTo(3.6, 9); ctx.lineTo(-3.6, 9); ctx.closePath(); ctx.fill();
+      // banner pole
+      ctx.strokeStyle = '#caa64a'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(7, -8); ctx.lineTo(7, -17); ctx.stroke();
+      ctx.lineWidth = 1;
+      const wv2 = Math.sin(time * 5) * 1.2;
+      ctx.fillStyle = '#f8fafc';
+      ctx.beginPath();
+      ctx.moveTo(7, -17);
+      ctx.quadraticCurveTo(12, -16 + wv2, 15, -15 + wv2);
+      ctx.lineTo(7, -12);
+      ctx.closePath(); ctx.fill();
       break;
     }
     case 'beacon': {
@@ -1185,13 +1218,16 @@ class Hero {
       }
     } else if (this.isMelee()) {
       e.damage(d, { pierce: 3 });
+      g.addFx({ type: 'slash', x: e.x, y: e.y, angle: this.heading, t: 0, dur: 0.18, color: crit ? '#fbbf24' : '#f8fafc' });
       g.sparkBurst(e.x, e.y, crit ? 6 : 3, '#f8fafc', 130, this.heading, 1.6);
       g.addFx({ type: 'glowfx', x: e.x, y: e.y, r: 8, rgb: '255,255,255', t: 0, dur: 0.13 });
     } else {
       // arrow / thorn shot
       e.damage(d, { pierce: 1 });
       if (this.def.markOnHit) { e.markT = this.def.markOnHit.dur; e.markPct = this.def.markOnHit.pct; }
-      g.addFx({ type: 'beam', x1: this.x, y1: this.y - 6, x2: e.x, y2: e.y, t: 0, dur: 0.1, color: crit ? '#fbbf24' : this.def.markOnHit ? '#86efac' : '#d9f99d' });
+      const acol = crit ? '#fbbf24' : this.def.markOnHit ? '#86efac' : '#d9f99d';
+      g.addFx({ type: 'beam', x1: this.x, y1: this.y - 6, x2: e.x, y2: e.y, t: 0, dur: 0.1, color: acol });
+      g.addFx({ type: 'arrow', x1: this.x, y1: this.y - 6, x2: e.x, y2: e.y, t: 0, dur: 0.12, color: acol });
       g.sparkBurst(e.x, e.y, crit ? 6 : 2, crit ? '#fbbf24' : '#d9f99d', 120);
       if (crit) g.addFx({ type: 'text', x: e.x, y: e.y - 14, t: 0, dur: 0.6, str: 'CRIT!', color: '#fbbf24' });
     }
@@ -1513,6 +1549,178 @@ class Hero {
   }
 }
 
+// ============ Militia (barracks soldiers) ============
+// Lightweight road-blockers trained by the Barracks tower. Each blocks
+// exactly one ground enemy; stats live on tower.stats (mHp/mDmg/...).
+class Militia {
+  constructor(tower, slot) {
+    this.game = tower.game;
+    this.tower = tower;
+    this.slot = slot; // 0..2 triangle position around the rally point
+    const p = this.slotPos();
+    this.x = p.x; this.y = p.y;
+    this.hp = tower.stats.mHp;
+    this.alive = true;
+    this.respawnT = 0;
+    this.engaged = null; // the single enemy this soldier blocks
+    this.cooldown = 0.4 + slot * 0.25;
+    this.heading = 0;
+    this.walking = false;
+  }
+
+  get maxHp() { return this.tower.stats.mHp; }
+  engagedHas(e) { return this.engaged === e; }
+  contactDps(e) { return e.def.boss ? 26 : clamp(3 + e.maxHp * 0.015, 3, 18); }
+
+  slotPos() {
+    const r = this.tower.rally;
+    const a = -Math.PI / 2 + this.slot * Math.PI * 2 / 3;
+    return {
+      x: clamp(r.x + Math.cos(a) * 13, 8, COLS * CELL - 8),
+      y: clamp(r.y + Math.sin(a) * 13, 8, ROWS * CELL - 8),
+    };
+  }
+
+  update(dt) {
+    const g = this.game, s = this.tower.stats;
+    if (!this.alive) {
+      this.respawnT -= dt;
+      if (this.respawnT <= 0) {
+        this.alive = true;
+        this.hp = s.mHp;
+        const p = this.slotPos();
+        this.x = p.x; this.y = p.y;
+        this.engaged = null;
+        this.cooldown = 0.4;
+        g.addFx({ type: 'ring', x: this.x, y: this.y, t: 0, dur: 0.4, r: 16, color: '#cbd5e1' });
+      }
+      return;
+    }
+    if (this.cooldown > 0) this.cooldown -= dt;
+
+    // drop invalid engagements (dead, leaked, or dragged out of reach)
+    if (this.engaged && (this.engaged.dead || this.engaged.finished ||
+        dist2(this.engaged.x, this.engaged.y, this.x, this.y) > 34 * 34)) this.engaged = null;
+
+    // engage the nearest free ground enemy within reach (1 enemy per soldier)
+    if (!this.engaged) {
+      let best = null, bd = 26 * 26;
+      for (const e of g.enemies) {
+        if (e.dead || e.finished || e.def.flying) continue;
+        if (this.tower.militia.some(m => m !== this && m.engaged === e)) continue;
+        const d2 = dist2(e.x, e.y, this.x, this.y);
+        if (d2 < bd) { bd = d2; best = e; }
+      }
+      this.engaged = best;
+    }
+
+    this.walking = false;
+    if (this.engaged) {
+      const e = this.engaged;
+      this.heading = Math.atan2(e.y - this.y, e.x - this.x);
+      // the blocked enemy claws back
+      if (e.stunT <= 0) this.hp -= this.contactDps(e) * dt * (1 - s.mArmor);
+      if (this.hp <= 0) { this.die(); return; }
+      if (this.cooldown <= 0) { this.attack(e); this.cooldown = s.mRate; }
+      return;
+    }
+
+    // no fight: regen, then walk back to the triangle slot
+    if (s.mRegen > 0) this.hp = Math.min(this.maxHp, this.hp + s.mRegen * dt);
+    const p = this.slotPos();
+    const d = dist(this.x, this.y, p.x, p.y);
+    if (d > 2) {
+      this.walking = true;
+      this.heading = Math.atan2(p.y - this.y, p.x - this.x);
+      const sp = Math.min(d, 70 * dt);
+      this.x += Math.cos(this.heading) * sp;
+      this.y += Math.sin(this.heading) * sp;
+    }
+  }
+
+  attack(e) {
+    const g = this.game;
+    e.damage(this.tower.stats.mDmg, { pierce: 1, src: this.tower });
+    g.addFx({ type: 'slash', x: e.x, y: e.y, angle: this.heading, t: 0, dur: 0.18, color: '#f8fafc' });
+    g.sparkBurst(e.x, e.y, 2, '#f8fafc', 110, this.heading, 1.4);
+  }
+
+  die() {
+    const g = this.game;
+    this.alive = false;
+    this.respawnT = this.tower.stats.mRespawn;
+    this.engaged = null;
+    g.addFx({ type: 'glowfx', x: this.x, y: this.y, r: 12, rgb: '148,163,184', t: 0, dur: 0.3 });
+    g.sparkBurst(this.x, this.y, 6, '#94a3b8', 120);
+  }
+
+  draw(ctx, time) {
+    if (!this.alive) return;
+    const bob = this.walking ? Math.sin(time * 14 + this.slot * 2.1) * 1.2 : 0;
+    const x = this.x, y = this.y + bob;
+    // shadow
+    ctx.beginPath();
+    ctx.ellipse(this.x, this.y + 7, 6, 2.4, 0, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.fill();
+    const spr = Sprites.towers['militia'];
+    if (spr) {
+      ctx.save();
+      ctx.translate(x, y);
+      if (Math.cos(this.heading) < -0.05) ctx.scale(-1, 1);
+      ctx.drawImage(spr, -13, -16, 26, 26);
+      ctx.restore();
+    } else {
+      ctx.save();
+      ctx.translate(x, y);
+      const flip = Math.cos(this.heading) < -0.05 ? -1 : 1;
+      ctx.scale(flip, 1);
+      // legs
+      ctx.fillStyle = '#2c3543';
+      ctx.fillRect(-3, 3, 2.4, 4.5);
+      ctx.fillRect(0.8, 3, 2.4, 4.5);
+      // steel-blue torso
+      const bg = ctx.createLinearGradient(0, -7, 0, 5);
+      bg.addColorStop(0, '#94a8c4'); bg.addColorStop(1, '#46566e');
+      ctx.fillStyle = bg;
+      ctx.beginPath(); ctx.ellipse(0, -1, 5, 6, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.4)'; ctx.stroke();
+      // head + helmet
+      ctx.fillStyle = '#e8c39e';
+      ctx.beginPath(); ctx.arc(0, -8.5, 3.4, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#7e8ca2';
+      ctx.beginPath(); ctx.arc(0, -9, 3.7, Math.PI, 0); ctx.fill();
+      ctx.fillRect(-3.7, -9.2, 7.4, 1.3);
+      // round shield on the left arm
+      ctx.fillStyle = '#64748b';
+      ctx.beginPath(); ctx.ellipse(-6, -1, 2.6, 4.2, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#334155'; ctx.stroke();
+      ctx.fillStyle = '#cbd5e1';
+      ctx.beginPath(); ctx.arc(-6, -1, 1.1, 0, Math.PI * 2); ctx.fill();
+      // sword on the right, swings while fighting
+      const rate = this.tower.stats.mRate || 1;
+      const swing = this.engaged ? Math.sin(clamp(1 - this.cooldown / rate, 0, 1) * Math.PI) : 0;
+      ctx.save();
+      ctx.translate(5, -2);
+      ctx.rotate(0.5 - swing * 1.6);
+      ctx.fillStyle = '#e2e8f0';
+      ctx.fillRect(-0.8, -9, 1.6, 8);
+      ctx.fillStyle = '#caa64a';
+      ctx.fillRect(-2.2, -1.4, 4.4, 1.4);
+      ctx.restore();
+      ctx.restore();
+    }
+    // mini HP bar when hurt
+    if (this.hp < this.maxHp - 0.5) {
+      const frac = clamp(this.hp / this.maxHp, 0, 1);
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      ctx.fillRect(this.x - 7, this.y - 16, 14, 3);
+      ctx.fillStyle = frac > 0.5 ? '#4ade80' : frac > 0.25 ? '#fbbf24' : '#f87171';
+      ctx.fillRect(this.x - 7, this.y - 16, 14 * frac, 3);
+    }
+  }
+}
+
 // ============ Enemy ============
 class Enemy {
   constructor(game, typeId, opts = {}) {
@@ -1602,11 +1810,14 @@ class Enemy {
       }
     }
 
-    // blocked by the hero: stop and fight
-    const hb = g.hero;
-    if (hb && hb.alive && !this.def.flying && hb.engagedHas(this)) {
-      this.heading = Math.atan2(hb.y - this.y, hb.x - this.x);
-      return;
+    // blocked by a defender (hero or militia): stop and fight
+    if (!this.def.flying) {
+      for (const b of g.blockers()) {
+        if (b.engagedHas(this)) {
+          this.heading = Math.atan2(b.y - this.y, b.x - this.x);
+          return;
+        }
+      }
     }
 
     const sp = this.effSpeed() * dt;
@@ -1805,6 +2016,20 @@ class Tower {
     this.ocCd = 0;
     this.resetSyn();
     this.recompute();
+    if (this.def.kind === 'barracks') {
+      this.rally = this.defaultRally();
+      this.militia = [new Militia(this, 0), new Militia(this, 1), new Militia(this, 2)];
+    }
+  }
+
+  // Default rally: stand on the nearest road point if it's in reach,
+  // otherwise nudge 30px toward it.
+  defaultRally() {
+    const rp = this.game.nearestRoadPoint(this.x, this.y);
+    const d = dist(this.x, this.y, rp.x, rp.y);
+    if (d <= Math.max(40, this.stats.range)) return { x: rp.x, y: rp.y };
+    const k = 30 / (d || 1);
+    return { x: this.x + (rp.x - this.x) * k, y: this.y + (rp.y - this.y) * k };
   }
 
   recompute() {
@@ -1880,6 +2105,10 @@ class Tower {
     if (this.ocCd > 0) this.ocCd -= dt;
     const k = this.def.kind;
     if (k === 'income' || k === 'support') return;
+    if (k === 'barracks') {
+      for (const m of this.militia) m.update(dt);
+      return;
+    }
     if (this.recoil > 0) this.recoil = Math.max(0, this.recoil - dt * 6);
     this.cooldown -= dt;
     if (this.cooldown > 0) return;
@@ -2302,7 +2531,7 @@ class Game {
   // ---- tap-to-overcharge: active player verb on any combat tower ----
   overchargeTower(t) {
     const COST = 60;
-    if (t.def.kind === 'income' || t.def.kind === 'support') return false;
+    if (t.def.kind === 'income' || t.def.kind === 'support' || t.def.kind === 'barracks') return false;
     if (t.ocCd > 0 || this.cash < COST || this.over) return false;
     this.cash -= COST;
     t.overchargeT = 6;
@@ -2354,6 +2583,35 @@ class Game {
     }
     const last = pts[pts.length - 1];
     return { x: last[0], y: last[1] };
+  }
+
+  // Nearest point on any road polyline (path maps); map center for mazes.
+  nearestRoadPoint(x, y) {
+    if (this.isMaze) return { x: COLS * CELL / 2, y: ROWS * CELL / 2 };
+    let best = { x: COLS * CELL / 2, y: ROWS * CELL / 2 }, bd = Infinity;
+    for (const pts of this.pathsPx) {
+      for (let i = 1; i < pts.length; i++) {
+        const ax = pts[i - 1][0], ay = pts[i - 1][1];
+        const dx = pts[i][0] - ax, dy = pts[i][1] - ay;
+        const L2 = dx * dx + dy * dy || 1;
+        const t = clamp(((x - ax) * dx + (y - ay) * dy) / L2, 0, 1);
+        const px = ax + dx * t, py = ay + dy * t;
+        const d2 = dist2(x, y, px, py);
+        if (d2 < bd) { bd = d2; best = { x: px, y: py }; }
+      }
+    }
+    return best;
+  }
+
+  // Everything that can block an enemy on the road: hero + live militia.
+  blockers() {
+    const out = [];
+    if (this.hero && this.hero.alive) out.push(this.hero);
+    for (const t of this.towers) {
+      if (!t.militia) continue;
+      for (const m of t.militia) if (m.alive) out.push(m);
+    }
+    return out;
   }
 
   // ---- building ----
@@ -2414,6 +2672,8 @@ class Game {
     t.levels[p]++;
     t.spent += cost;
     t.recompute();
+    // barracks upgrades heal standing militia to the new max
+    if (t.militia) for (const m of t.militia) if (m.alive) m.hp = t.stats.mHp;
     if (t.levels[0] >= 3 && t.levels[1] >= 3) this.emit('onAch', 'maxTower');
     Sound.play('upgrade');
     return true;
@@ -2637,6 +2897,18 @@ class Game {
       }
       return;
     }
+    // barracks rally control: click open ground in range to move the flag
+    if (this.selected && this.selected.def.kind === 'barracks') {
+      const b = this.selected;
+      if (dist2(px, py, b.x, b.y) <= b.effRange * b.effRange) {
+        b.rally = {
+          x: clamp(px, 12, COLS * CELL - 12),
+          y: clamp(py, 12, ROWS * CELL - 12),
+        };
+        this.addFx({ type: 'text', x: b.rally.x, y: b.rally.y - 8, t: 0, dur: 0.8, str: '⚑', color: '#f8fafc' });
+        return; // stay selected so the player can keep adjusting
+      }
+    }
     this.selected = null;
   }
 
@@ -2788,6 +3060,11 @@ class Game {
       const dps = (t.effDmg * shots * critMul) / t.effRate;
       lines.push('Damage ' + Math.round(t.effDmg) + (shots > 1 ? ' ×' + shots : '') + (s.critCh > 0 ? '  (crit ×3: ' + Math.round(t.effDmg * 3) + ')' : ''));
       lines.push('Speed ' + (1 / t.effRate).toFixed(2) + '/s   DPS ' + Math.round(dps) + (s.chain > 1 ? ' per target' : ''));
+    }
+    if (t.def.kind === 'barracks') {
+      lines.push('Militia HP ' + Math.round(s.mHp) + (s.mArmor > 0 ? '  (blocks ' + Math.round(s.mArmor * 100) + '% dmg)' : ''));
+      lines.push('Militia damage ' + Math.round(s.mDmg) + ' every ' + s.mRate.toFixed(1) + 's');
+      lines.push('Respawn ' + s.mRespawn + 's' + (s.mRegen > 0 ? '  ·  regen ' + s.mRegen + '/s' : ''));
     }
     if (s.range > 0) lines.push('Range ' + Math.round(t.effRange));
     if (s.splash > 0) lines.push('Blast radius ' + Math.round(s.splash));
@@ -3144,6 +3421,22 @@ class Game {
         ctx.strokeStyle = 'rgba(56,189,248,0.5)';
         ctx.stroke();
       }
+      // barracks: rally flag marker
+      if (t.def.kind === 'barracks') {
+        const r = t.rally;
+        ctx.strokeStyle = 'rgba(248,250,252,0.5)';
+        ctx.beginPath(); ctx.ellipse(r.x, r.y + 4, 6, 2.4, 0, 0, Math.PI * 2); ctx.stroke();
+        ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(r.x, r.y + 4); ctx.lineTo(r.x, r.y - 14); ctx.stroke();
+        ctx.lineWidth = 1;
+        const wv = Math.sin(this.time * 6) * 1.5;
+        ctx.fillStyle = '#f8fafc';
+        ctx.beginPath();
+        ctx.moveTo(r.x, r.y - 14);
+        ctx.quadraticCurveTo(r.x + 6, r.y - 13 + wv, r.x + 11, r.y - 12 + wv);
+        ctx.lineTo(r.x, r.y - 7);
+        ctx.closePath(); ctx.fill();
+      }
     }
 
     // towers
@@ -3192,6 +3485,12 @@ class Game {
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText('\ud83d\udd17', (sy.a.x + sy.b.x) / 2, (sy.a.y + sy.b.y) / 2 - 8);
       }
+    }
+
+    // militia (after towers, under enemies)
+    for (const t of this.towers) {
+      if (!t.militia) continue;
+      for (const m of t.militia) m.draw(ctx, this.time);
     }
 
     // enemies
@@ -3362,6 +3661,35 @@ class Game {
           ctx.beginPath(); ctx.moveTo(f.x1, f.y1); ctx.lineTo(f.x2, f.y2); ctx.stroke();
         }
         ctx.lineWidth = 1;
+      } else if (f.type === 'slash') {
+        // melee blade sweep: expanding white crescent in the strike direction
+        ctx.save();
+        ctx.translate(f.x, f.y);
+        ctx.rotate(f.angle || 0);
+        const rr = 6 + 11 * k;
+        ctx.globalAlpha = 1 - k;
+        ctx.strokeStyle = f.color || '#f8fafc';
+        ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(0, 0, rr, -1.15, 1.15); ctx.stroke();
+        ctx.globalAlpha = (1 - k) * 0.5;
+        ctx.lineWidth = 1.6;
+        ctx.beginPath(); ctx.arc(0, 0, rr * 0.68, -0.95, 0.95); ctx.stroke();
+        ctx.lineWidth = 1;
+        ctx.restore();
+      } else if (f.type === 'arrow') {
+        // small arrow flying from (x1,y1) to (x2,y2)
+        const ax = f.x1 + (f.x2 - f.x1) * k, ay = f.y1 + (f.y2 - f.y1) * k;
+        const aa = Math.atan2(f.y2 - f.y1, f.x2 - f.x1);
+        ctx.save();
+        ctx.translate(ax, ay);
+        ctx.rotate(aa);
+        ctx.strokeStyle = f.color || '#d9f99d';
+        ctx.lineWidth = 1.6;
+        ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(0, 0); ctx.stroke();
+        ctx.lineWidth = 1;
+        ctx.fillStyle = f.color || '#d9f99d';
+        ctx.beginPath(); ctx.moveTo(4, 0); ctx.lineTo(-1, -2.4); ctx.lineTo(-1, 2.4); ctx.closePath(); ctx.fill();
+        ctx.restore();
       } else if (f.type === 'glowfx') {
         const rr = f.r * (0.6 + 0.4 * k);
         const g = ctx.createRadialGradient(f.x, f.y, 0.5, f.x, f.y, rr);

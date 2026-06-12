@@ -56,6 +56,23 @@ const TOWERS = {
       ]},
     ],
   },
+  barracks: {
+    name: 'Barracks', icon: '🛡️', cost: 90, kind: 'barracks',
+    desc: 'Trains 3 militia who block the road and fight.',
+    base: { range: 95, rate: 0, dmg: 0, mHp: 60, mDmg: 6, mRate: 1.0, mRespawn: 10, mArmor: 0, mRegen: 0 },
+    paths: [
+      { name: 'Veterans', tiers: [
+        { name: 'Drilled Recruits', cost: 80, desc: '+25 militia HP, +3 damage', mod: t => { t.mHp += 25; t.mDmg += 3; } },
+        { name: 'Hardened Steel', cost: 180, desc: '+35 militia HP, +5 damage', mod: t => { t.mHp += 35; t.mDmg += 5; } },
+        { name: 'Champions', cost: 400, desc: '+60 HP, +10 dmg, 25% faster strikes', mod: t => { t.mHp += 60; t.mDmg += 10; t.mRate *= 0.8; } },
+      ]},
+      { name: 'Field Medics', tiers: [
+        { name: 'Bandages', cost: 70, desc: 'Militia regen 3 HP/s out of combat', mod: t => { t.mRegen = 3; } },
+        { name: 'Quick Muster', cost: 160, desc: 'Fallen militia respawn in 6s', mod: t => { t.mRespawn = 6; } },
+        { name: 'Tower Shields', cost: 380, desc: 'Militia ignore 40% of damage, +25 HP', mod: t => { t.mArmor = 0.4; t.mHp += 25; } },
+      ]},
+    ],
+  },
   tesla: {
     name: 'Tesla', icon: '⚡', cost: 130, kind: 'chain',
     desc: 'Lightning that chains between enemies.',
@@ -160,7 +177,7 @@ const TOWERS = {
   },
 };
 
-const TOWER_ORDER = ['gunner', 'cannon', 'frost', 'tesla', 'venom', 'sniper', 'missile', 'bank', 'beacon'];
+const TOWER_ORDER = ['gunner', 'cannon', 'frost', 'barracks', 'tesla', 'venom', 'sniper', 'missile', 'bank', 'beacon'];
 
 // ============ Heroes ============
 // One hero per match. Walks anywhere, blocks enemies, levels up (kills near

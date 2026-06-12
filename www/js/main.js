@@ -768,6 +768,7 @@ function fmtStats(s, g) {
   if (s.slowPct > 0) out.push(`Slow ${Math.round(s.slowPct * 100)}%`);
   if (s.poisonDps > 0) out.push(`Poison ${Math.round(s.poisonDps * s.poisonDur)}`);
   if (s.burnDps > 0) out.push(`Burn ${Math.round(s.burnDps * s.burnDur)}`);
+  if (s.mHp > 0) out.push(`Militia HP ${Math.round(s.mHp)}`, `Militia dmg ${Math.round(s.mDmg)}`, `Respawn ${s.mRespawn}s`);
   if (s.income > 0) out.push(`Income $${s.income}/wave`);
   if (s.interestPct > 0) out.push(`Interest ${(s.interestPct * 100).toFixed(1)}%`);
   if (s.buffDmg > 0) out.push(`Aura +${Math.round(s.buffDmg * 100)}% dmg`);
@@ -818,6 +819,16 @@ function refreshInfoPanel() {
         <div><h3>${selName}</h3><p class="tstats">${fmtStats(sel.stats, game)}</p></div>
       </div>`;
       panel.appendChild(head);
+      if (sel.def.kind === 'barracks') {
+        const ms = document.createElement('p');
+        ms.className = 'tstats';
+        ms.textContent = `Militia: HP ${Math.round(sel.stats.mHp)} · Dmg ${Math.round(sel.stats.mDmg)} · respawn ${sel.stats.mRespawn}s`;
+        panel.appendChild(ms);
+        const rh = document.createElement('p');
+        rh.className = 'hint';
+        rh.textContent = '⚑ Click the road to move the rally point.';
+        panel.appendChild(rh);
+      }
       sel.def.paths.forEach((path, p) => {
         const wrap = document.createElement('div');
         wrap.className = 'upg-path';
@@ -850,7 +861,7 @@ function refreshInfoPanel() {
       }
       const row = document.createElement('div');
       row.className = 'info-row';
-      if (sel.def.kind !== 'income' && sel.def.kind !== 'support') {
+      if (sel.def.kind !== 'income' && sel.def.kind !== 'support' && sel.def.kind !== 'barracks') {
         const oc = document.createElement('button');
         oc.className = 'oc-btn';
         oc.id = 'btn-overcharge';
