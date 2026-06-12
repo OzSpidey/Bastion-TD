@@ -33,6 +33,8 @@ const Sound = {
     leak:    [300, 80, 0.4, 'sawtooth', 0.09],
     wave:    [523, 784, 0.25, 'sine', 0.06],
     zap:     [900, 1400, 0.06, 'square', 0.025],
+    dart:    [380, 160, 0.08, 'triangle', 0.03],
+    snipe:   [1400, 200, 0.12, 'sawtooth', 0.04],
     cash:    [880, 1320, 0.1, 'sine', 0.05],
     lose:    [220, 55, 1.0, 'sawtooth', 0.1],
     win:     [523, 1046, 0.6, 'sine', 0.08],
@@ -48,15 +50,85 @@ const Sound = {
     if (this.last[name] && now - this.last[name] < 50) return;
     this.last[name] = now;
     const p = this.presets[name] || [440, 440, 0.1, 'sine', 0.05];
+    const vary = 0.92 + Math.random() * 0.16;
     const t = this.ctx.currentTime;
     const o = this.ctx.createOscillator(), g = this.ctx.createGain();
     o.connect(g); g.connect(this.ctx.destination);
     o.type = p[3];
-    o.frequency.setValueAtTime(p[0], t);
-    o.frequency.exponentialRampToValueAtTime(Math.max(30, p[1]), t + p[2]);
+    o.frequency.setValueAtTime(p[0] * vary, t);
+    o.frequency.exponentialRampToValueAtTime(Math.max(30, p[1] * vary), t + p[2]);
     g.gain.setValueAtTime(p[4], t);
     g.gain.exponentialRampToValueAtTime(0.0001, t + p[2]);
     o.start(t); o.stop(t + p[2] + 0.02);
+  },
+};
+
+// ============ Music (procedural chiptune loop, no assets) ============
+// A-minor progression; calm pad+arp normally, drums kick in during waves.
+const Music = {
+  on: true, ctx: null, gain: null, timer: null, step: 0, nextT: 0, intensity: 0,
+  CHORDS: [[220, 261.63, 329.63], [174.61, 220, 261.63], [196, 246.94, 293.66], [164.81, 196, 261.63]],
+  STEP: 0.21,
+  start() {
+    if (!this.on || this.timer) return;
+    try {
+      if (!this.ctx) {
+        this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        this.gain = this.ctx.createGain();
+        this.gain.gain.value = 0.5;
+        this.gain.connect(this.ctx.destination);
+      }
+      if (this.ctx.state === 'suspended') this.ctx.resume();
+      this.step = 0;
+      this.nextT = this.ctx.currentTime + 0.1;
+      this.timer = setInterval(() => this.tick(), 120);
+    } catch (e) { /* no audio available */ }
+  },
+  stop() {
+    if (this.timer) { clearInterval(this.timer); this.timer = null; }
+  },
+  note(freq, t, dur, type, vol, dest) {
+    const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+    o.type = type; o.frequency.value = freq;
+    o.connect(g); g.connect(dest || this.gain);
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.start(t); o.stop(t + dur + 0.02);
+  },
+  noise(t, dur, vol) {
+    const n = Math.floor(this.ctx.sampleRate * dur);
+    const buf = this.ctx.createBuffer(1, n, this.ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
+    const s = this.ctx.createBufferSource(), g = this.ctx.createGain();
+    s.buffer = buf;
+    s.connect(g); g.connect(this.gain);
+    g.gain.value = vol;
+    s.start(t);
+  },
+  tick() {
+    if (!this.ctx) return;
+    const ct = this.ctx.currentTime;
+    while (this.nextT < ct + 0.5) {
+      this.schedule(this.step % 64, this.nextT);
+      this.step++;
+      this.nextT += this.STEP;
+    }
+  },
+  schedule(s, t) {
+    const chord = this.CHORDS[Math.floor(s / 16) % 4];
+    if (s % 16 === 0) {
+      for (const f of chord) this.note(f, t, this.STEP * 15, 'sine', 0.018); // pad
+    }
+    if (s % 8 === 0) this.note(chord[0] / 2, t, this.STEP * 3, 'triangle', 0.05); // bass
+    if (s % 2 === 0) {
+      const arp = chord[(s / 2) % 3];
+      this.note(arp * 2, t, this.STEP * 1.1, 'square', this.intensity > 0 ? 0.016 : 0.010);
+    }
+    if (this.intensity > 0) {
+      if (s % 8 === 4) this.noise(t, 0.05, 0.05);              // hat
+      if (s % 16 === 8) this.note(70, t, 0.12, 'sine', 0.09);  // kick
+    }
   },
 };
 
@@ -648,6 +720,12 @@ function drawEnemy(ctx, e, time) {
   } else {
     drawEnemyBody(ctx, e, x, y, time);
   }
+  if (e.hitT > 0) {
+    ctx.globalAlpha = (e.hitT / 0.09) * 0.45;
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.arc(x, y, r * 1.05, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = stealthHidden ? 0.4 : 1;
+  }
   if (e.def.armor) {
     ctx.beginPath(); ctx.arc(x, y, r + 2.5, 0, Math.PI * 2);
     ctx.strokeStyle = e.shred >= e.def.armor ? 'rgba(148,163,184,0.25)' : '#94a3b8';
@@ -1043,6 +1121,7 @@ class Hero {
       const targets = g.enemies.filter(e => !e.dead && !e.finished && !e.def.flying && dist2(e.x, e.y, this.x, this.y) < 60 * 60);
       if (targets.length < 2) return false;
       announce();
+      g.addShake(3);
       g.addFx({ type: 'ring', x: this.x, y: this.y, t: 0, dur: 0.4, r: 60, color: '#e2e8f0' });
       g.addGround({ type: 'scorch', x: this.x, y: this.y, r: 28, t: 0, dur: 2 });
       g.sparkBurst(this.x, this.y, 10, '#e2e8f0', 180);
@@ -1090,6 +1169,7 @@ class Hero {
       const cx = best.x, cy = best.y;
       g.addFx({ type: 'beam', x1: cx + 60, y1: cy - 130, x2: cx, y2: cy, t: 0, dur: 0.5, color: '#fb923c' });
       this.pending.push({ t: 0.45, fn: () => {
+        g.addShake(4);
         g.addFx({ type: 'boom', x: cx, y: cy, t: 0, dur: 0.4, r: 55, color: '#fdba74' });
         g.addFx({ type: 'glowfx', x: cx, y: cy, r: 60, rgb: '255,170,60', t: 0, dur: 0.35 });
         g.addGround({ type: 'scorch', x: cx, y: cy, r: 42, t: 0, dur: 5 });
@@ -1311,6 +1391,7 @@ class Enemy {
     this.markT = 0; this.markPct = 0;
     this.revealed = false;
     this.heading = 0;
+    this.hitT = 0;
 
     if (game.isMaze) {
       const spawn = game.map.spawns[this.pathIndex % game.map.spawns.length];
@@ -1349,6 +1430,7 @@ class Enemy {
     if (this.hp <= 0) { this.die(); return; }
     if (this.slowT > 0) this.slowT -= dt;
     if (this.markT > 0) this.markT -= dt;
+    if (this.hitT > 0) this.hitT -= dt;
     if (this.stunT > 0) { this.stunT -= dt; return; }
 
     // blocked by the hero: stop and fight
@@ -1423,7 +1505,23 @@ class Enemy {
     }
     if (this.markT > 0) dealt *= (1 + this.markPct);
     this.hp -= dealt;
+    this.hitT = 0.09;
+    if (opts.src) opts.src.totalDmg = (opts.src.totalDmg || 0) + Math.min(dealt, Math.max(0, this.hp + dealt));
     if (opts.armorShred) this.shred = Math.min((this.def.armor || 0), this.shred + opts.armorShred);
+    // floating damage numbers (throttled per enemy)
+    const g = this.game;
+    if (g.settings.dmgNums) {
+      this._dmgAcc = (this._dmgAcc || 0) + dealt;
+      if (this._dmgT == null || g.time - this._dmgT > 0.22 || opts.crit) {
+        g.addFx({
+          type: 'dmg', x: this.x + (Math.random() - 0.5) * 10, y: this.y - this.def.radius - 6,
+          t: 0, dur: opts.crit ? 0.8 : 0.55,
+          str: String(Math.round(this._dmgAcc)), crit: !!opts.crit,
+        });
+        this._dmgAcc = 0;
+        this._dmgT = g.time;
+      }
+    }
     if (this.hp <= 0) this.die();
   }
 
@@ -1464,6 +1562,7 @@ class Enemy {
       });
     }
     if (this.def.boss) {
+      g.addShake(6);
       g.addFx({ type: 'ring', x: this.x, y: this.y, t: 0, dur: 0.6, r: 90, color: this.def.color });
       g.addFx({ type: 'glowfx', x: this.x, y: this.y, r: 50, rgb: '255,255,255', t: 0, dur: 0.35 });
     }
@@ -1582,7 +1681,7 @@ class Tower {
       for (const e of targets) {
         e.applySlow(s.slowPct, s.slowDur);
         if (s.stunCh > 0 && Math.random() < s.stunCh) e.stunT = Math.max(e.stunT, s.stunDur);
-        e.damage(this.effDmg, { pierce: s.pierce });
+        e.damage(this.effDmg, { pierce: s.pierce, src: this });
         g.addFx({ type: 'glowfx', x: e.x, y: e.y, r: 9, rgb: '186,230,253', t: 0, dur: 0.25 });
       }
       g.addFx({ type: 'ring', x: this.x, y: this.y, t: 0, dur: 0.35, r: this.effRange, color: '#7dd3fc' });
@@ -1620,7 +1719,7 @@ class Tower {
         g.addFx({ type: 'glowfx', x: e.x, y: e.y, r: 13, rgb: '216,180,254', t: 0, dur: 0.22 });
         g.sparkBurst(e.x, e.y, 3, '#e9d5ff', 110);
         if (s.stunCh > 0 && Math.random() < s.stunCh) e.stunT = Math.max(e.stunT, s.stunDur);
-        e.damage(this.effDmg, { pierce: s.pierce });
+        e.damage(this.effDmg, { pierce: s.pierce, src: this });
         px = e.x; py = e.y;
       }
       Sound.play('zap');
@@ -1634,13 +1733,13 @@ class Tower {
       if (crit) dmg *= 3;
       if (s.markPct > 0) { e.markT = s.markDur; e.markPct = s.markPct; }
       this.aimAt(e);
-      e.damage(dmg, { pierce: s.pierce });
+      e.damage(dmg, { pierce: s.pierce, crit, src: this });
       const col = crit ? '#fbbf24' : '#fde68a';
       g.addFx({ type: 'beam', x1: this.x, y1: this.y, x2: e.x, y2: e.y, t: 0, dur: 0.12, color: col });
       g.addFx({ type: 'glowfx', x: e.x, y: e.y, r: crit ? 16 : 10, rgb: crit ? '251,191,36' : '253,230,138', t: 0, dur: 0.2 });
       g.sparkBurst(e.x, e.y, crit ? 8 : 4, col, 170, Math.atan2(e.y - this.y, e.x - this.x), 1.8);
       if (crit) g.addFx({ type: 'text', x: e.x, y: e.y - 14, t: 0, dur: 0.7, str: 'CRIT!', color: '#fbbf24' });
-      Sound.play('shoot');
+      Sound.play('snipe');
       return true;
     }
     // bullet / shell / missile: projectiles
@@ -1653,7 +1752,7 @@ class Tower {
       const tgt = targets[i % targets.length];
       g.projectiles.push(new Projectile(g, this, tgt, i * 6));
     }
-    Sound.play('shoot');
+    Sound.play(this.type === 'venom' ? 'dart' : 'shoot');
     return true;
   }
 }
@@ -1700,9 +1799,10 @@ class Projectile {
     this.dead = true;
     const g = this.game, s = this.tower.stats, tw = this.tower;
     const dmg = tw.effDmg;
-    const opts = { pierce: s.pierce, ignoreArmor: s.ignoreArmor, armorShred: s.armorShred };
+    const opts = { pierce: s.pierce, ignoreArmor: s.ignoreArmor, armorShred: s.armorShred, src: tw };
     if (s.splash > 0) {
       // fireball, sparks, rising smoke and a lingering scorch mark
+      g.addShake(s.splash > 50 ? 2.5 : 1.4);
       g.addFx({ type: 'glowfx', x: this.lastX, y: this.lastY, r: s.splash * 0.95, rgb: '255,200,110', t: 0, dur: 0.28 });
       g.addFx({ type: 'boom', x: this.lastX, y: this.lastY, t: 0, dur: 0.3, r: s.splash, color: '#fca5a5' });
       g.addGround({ type: 'scorch', x: this.lastX, y: this.lastY, r: s.splash * 0.75, t: 0, dur: 4 });
@@ -1809,8 +1909,12 @@ class Game {
     this.armedAbility = null;
     this.mouse = { x: -100, y: -100 };
     this.overclockT = 0;
+    this.shakeT = 0;
+    this.shakeMag = 0;
+    this.settings = Object.assign({ shake: true, dmgNums: true }, opts.settings || {});
     this.cds = {}; ABILITIES.forEach(a => { this.cds[a.id] = 0; });
     this.stats = { kills: 0, bossKills: 0, cashEarned: 0, leaks: 0 };
+    this.pendingWave = null; // generated after terrain setup
     this.richEmitted = false;
 
     // terrain precompute
@@ -1857,6 +1961,18 @@ class Game {
       }
       this.hero = new Hero(this, opts.heroId, hx, hy);
     }
+    this.pendingWave = { wave: 1, entries: this.genWave(1) };
+  }
+
+  // [{type, n}] of the next wave, ordered by first appearance
+  previewNextWave() {
+    if (!this.pendingWave) return [];
+    const counts = {}, order = [];
+    for (const e of this.pendingWave.entries) {
+      if (!(e.type in counts)) { counts[e.type] = 0; order.push(e.type); }
+      counts[e.type]++;
+    }
+    return order.map(t => ({ type: t, n: counts[t] }));
   }
 
   emit(name, ...args) { if (this.events[name]) this.events[name](...args); }
@@ -2033,11 +2149,13 @@ class Game {
         Sound.play('cash');
       }
     }
-    this.spawnQueue = this.genWave(this.wave);
+    this.spawnQueue = this.pendingWave && this.pendingWave.wave === this.wave
+      ? this.pendingWave.entries : this.genWave(this.wave);
+    this.pendingWave = { wave: this.wave + 1, entries: this.genWave(this.wave + 1) };
     this.waveActive = true;
     this.waveTime = 0;
     const isBoss = this.mode === 'bossrush' || this.wave % 10 === 0;
-    this.addFx({ type: 'text', x: COLS * CELL / 2, y: CELL * ROWS / 2 - 30, t: 0, dur: 1.5, str: (isBoss ? '☠ BOSS ' : '') + 'WAVE ' + this.wave, color: isBoss ? '#ff5577' : '#e2e8f0', big: true });
+    this.addFx({ type: 'banner', t: 0, dur: 1.8, str: (isBoss ? '☠ BOSS ' : '') + 'WAVE ' + this.wave, color: isBoss ? '#ff5577' : '#e2e8f0' });
     Sound.play('wave');
     this.emit('onWave', this.wave);
   }
@@ -2045,6 +2163,7 @@ class Game {
   leak(enemy) {
     this.lives -= enemy.def.lives;
     this.stats.leaks++;
+    this.addShake(2.5);
     this.addFx({ type: 'flash', t: 0, dur: 0.25 });
     Sound.play('leak');
     if (this.lives <= 0 && !this.over) { this.lives = 0; this.end(false); }
@@ -2084,6 +2203,7 @@ class Game {
     const def = ABILITIES.find(a => a.id === 'airstrike');
     this.cds.airstrike = def.cd * this.bonuses.cdMul;
     this.armedAbility = null;
+    this.addShake(4);
     for (let i = 0; i < 3; i++) {
       const ox = x + (Math.random() - 0.5) * 70, oy = y + (Math.random() - 0.5) * 70;
       this.damageArea(ox, oy, 60, 120);
@@ -2132,6 +2252,11 @@ class Game {
   }
 
   addFx(f) { this.fx.push(f); }
+  addShake(mag) {
+    if (!this.settings.shake) return;
+    this.shakeT = 0.35;
+    this.shakeMag = Math.max(this.shakeMag, mag);
+  }
   addParticle(p) { if (this.particles.length < 400) this.particles.push(p); }
   addGround(f) {
     this.groundFx.push(f);
@@ -2173,6 +2298,7 @@ class Game {
     this.time += dt;
     for (const id in this.cds) this.cds[id] = Math.max(0, this.cds[id] - dt);
     if (this.overclockT > 0) this.overclockT -= dt;
+    if (this.shakeT > 0) { this.shakeT -= dt; if (this.shakeT <= 0) this.shakeMag = 0; }
 
     if (!this.waveActive && this.autoTimer > 0) {
       this.autoTimer -= dt;
@@ -2281,6 +2407,7 @@ class Game {
     if (s.buffRange > 0) lines.push('Nearby towers +' + Math.round(s.buffRange * 100) + '% range');
     if (!s.canAir) lines.push('Cannot hit air');
     if (s.seesStealth) lines.push('Sees stealth');
+    if (t.totalDmg > 0) lines.push('Total dealt: ' + (t.totalDmg >= 10000 ? (t.totalDmg / 1000).toFixed(1) + 'k' : Math.round(t.totalDmg)));
 
     const title = t.def.name + '  ' + t.levels[0] + '/' + t.levels[1];
     ctx.font = 'bold 12px "Segoe UI", sans-serif';
@@ -2470,6 +2597,11 @@ class Game {
   render(ctx) {
     const W = COLS * CELL, H = ROWS * CELL;
     ctx.clearRect(0, 0, W, H);
+    ctx.save();
+    if (this.shakeT > 0) {
+      const m = this.shakeMag * (this.shakeT / 0.35);
+      ctx.translate((Math.random() - 0.5) * 2 * m, (Math.random() - 0.5) * 2 * m);
+    }
     ctx.drawImage(this.terrain, 0, 0);
 
     // maze portals (animated)
@@ -2714,7 +2846,40 @@ class Game {
         ctx.font = f.big ? 'bold 34px "Segoe UI", sans-serif' : 'bold 13px "Segoe UI", sans-serif';
         ctx.fillStyle = f.color;
         ctx.globalAlpha = 1 - k * k;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText(f.str, f.x, f.y - k * 22);
+      } else if (f.type === 'dmg') {
+        ctx.font = (f.crit ? 'bold 14px' : 'bold 10px') + ' "Segoe UI", sans-serif';
+        ctx.fillStyle = f.crit ? '#fbbf24' : '#f8fafc';
+        ctx.strokeStyle = 'rgba(0,0,0,0.7)';
+        ctx.lineWidth = 2.5;
+        ctx.globalAlpha = 1 - k * k;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        const dy = f.y - k * 18;
+        ctx.strokeText(f.str, f.x, dy);
+        ctx.fillText(f.str, f.x, dy);
+        ctx.lineWidth = 1;
+      } else if (f.type === 'banner') {
+        // slide-in wave banner with dark strip
+        const inK = clamp(f.t / 0.25, 0, 1);
+        const outK = clamp((f.dur - f.t) / 0.35, 0, 1);
+        const a = Math.min(inK, outK);
+        const by = H * 0.34;
+        ctx.globalAlpha = 0.55 * a;
+        const bg = ctx.createLinearGradient(0, by - 30, 0, by + 30);
+        bg.addColorStop(0, 'rgba(8,12,20,0)');
+        bg.addColorStop(0.5, 'rgba(8,12,20,1)');
+        bg.addColorStop(1, 'rgba(8,12,20,0)');
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, by - 34, W, 68);
+        ctx.globalAlpha = a;
+        ctx.strokeStyle = f.color;
+        ctx.beginPath(); ctx.moveTo(W * (0.5 - 0.3 * inK), by - 26); ctx.lineTo(W * (0.5 + 0.3 * inK), by - 26); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(W * (0.5 - 0.3 * inK), by + 26); ctx.lineTo(W * (0.5 + 0.3 * inK), by + 26); ctx.stroke();
+        ctx.font = 'bold 36px "Segoe UI", sans-serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillStyle = f.color;
+        ctx.fillText(f.str, W / 2, by);
       } else if (f.type === 'flash') {
         ctx.fillStyle = 'rgba(248,113,113,' + (0.25 * (1 - k)) + ')';
         ctx.fillRect(0, 0, W, H);
@@ -2741,5 +2906,6 @@ class Game {
       ctx.fillStyle = '#fbbf24';
       ctx.fillText('AIRSTRIKE — click target', this.mouse.x, this.mouse.y - 75);
     }
+    ctx.restore();
   }
 }

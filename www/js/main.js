@@ -6,7 +6,9 @@ let SAVE = loadSave();
 function loadSave() {
   const def = {
     rp: 0, perks: {}, stars: {}, ach: {}, bossKills: 0,
-    bestEndless: 0, bestMaze: 0, sound: true, dailyDone: {}, hero: 'aldric',
+    bestEndless: 0, bestMaze: 0, sound: true, music: true, shake: true, dmgNums: true,
+    dailyDone: {}, hero: 'aldric', heroXp: {}, dailyStreak: 0, lastDaily: '',
+    life: { kills: 0, waves: 0, games: 0, wins: 0 },
   };
   try {
     const raw = localStorage.getItem(SAVE_KEY);
@@ -58,7 +60,8 @@ function unlock(id) {
 function renderMenu() {
   $('#menu-rp').textContent = `(${SAVE.rp} RP)`;
   $('#menu-ach').textContent = `(${Object.keys(SAVE.ach).length}/${ACHIEVEMENTS.length})`;
-  const parts = [`⭐ ${starsTotal()}/45 stars`];
+  const parts = [`⭐ ${starsTotal()}/${CAMPAIGN_MAPS.length * 9} stars`];
+  if (SAVE.dailyStreak > 1) parts.push(`🔥 ${SAVE.dailyStreak}-day streak`);
   if (SAVE.bestEndless) parts.push(`♾️ best wave ${SAVE.bestEndless}`);
   if (SAVE.bestMaze) parts.push(`🌀 best wave ${SAVE.bestMaze}`);
   $('#menu-stats').textContent = parts.join('  ·  ');
@@ -184,7 +187,8 @@ function renderHeroStrip() {
     const h = HEROES[id];
     const b = document.createElement('button');
     b.className = 'hero-chip' + (SAVE.hero === id ? ' sel' : '');
-    b.innerHTML = `<span class="hc-icon">${h.icon}</span><span class="hc-name">${h.name}</span><span class="hc-title">${h.title}</span>`;
+    const hlvl = (SAVE.heroXp[id] && SAVE.heroXp[id].lvl) || 1;
+    b.innerHTML = `<span class="hc-icon">${h.icon}</span><span class="hc-name">${h.name}</span><span class="hc-title">${h.title} · Lv ${hlvl}</span>`;
     b.title = `${h.desc}\n${h.ability.name}: ${h.ability.desc}`;
     b.addEventListener('click', () => {
       SAVE.hero = id;
@@ -273,6 +277,8 @@ function startGame(cfg) {
   gameCfg = cfg;
   speedIdx = 0;
   infoSig = '';
+  tutStep = -1;
+  previewSig = '__init__';
   Sound.on = SAVE.sound;
   game = new Game({
     map: cfg.map,
@@ -282,8 +288,10 @@ function startGame(cfg) {
     modifierIds: cfg.modifierIds,
     seed: cfg.seed,
     heroId: SAVE.hero,
+    settings: { shake: SAVE.shake, dmgNums: SAVE.dmgNums },
     events: {
       onEnd: handleEnd,
+      onWave: () => announceNewEnemies(),
       onWaveCleared: n => {
         if (cfg.mode === 'endless') {
           if (n > SAVE.bestEndless) { SAVE.bestEndless = n; saveSave(); }
@@ -305,14 +313,39 @@ function startGame(cfg) {
       },
     },
   });
+  // restore the hero's persistent level
+  if (game.hero) {
+    const hx = SAVE.heroXp[SAVE.hero];
+    if (hx && hx.lvl > 1) {
+      game.hero.lvl = Math.min(10, hx.lvl);
+      game.hero.xp = hx.xp || 0;
+      game.hero.maxHp = Math.round(game.hero.def.hp * (1 + 0.12 * (game.hero.lvl - 1)));
+      game.hero.hp = game.hero.maxHp;
+    }
+  }
+  Music.on = SAVE.music;
+  Music.start();
   buildBuildBar();
   buildAbilityBar();
   hideOverlay();
   show('screen-game');
 }
 
+function persistHero() {
+  if (!game || !game.hero) return;
+  const cur = SAVE.heroXp[game.hero.id] || { lvl: 1, xp: 0 };
+  if (game.hero.lvl > cur.lvl || (game.hero.lvl === cur.lvl && game.hero.xp > cur.xp)) {
+    SAVE.heroXp[game.hero.id] = { lvl: game.hero.lvl, xp: Math.floor(game.hero.xp) };
+  }
+}
+
 function handleEnd(res) {
   if (res.rp > 0) { SAVE.rp += res.rp; }
+  persistHero();
+  SAVE.life.games++;
+  SAVE.life.kills += res.kills;
+  SAVE.life.waves += res.wavesCleared;
+  if (res.won) SAVE.life.wins++;
   if (gameCfg.mode === 'campaign' && res.won) {
     const key = gameCfg.map.id + ':' + DIFFICULTIES[gameCfg.diffIndex].id;
     if (res.stars > (SAVE.stars[key] || 0)) SAVE.stars[key] = res.stars;
@@ -322,6 +355,16 @@ function handleEnd(res) {
   }
   if (gameCfg.mode === 'daily' && res.won) {
     unlock('daily_win');
+    if (!SAVE.dailyDone[gameCfg.dateStr]) {
+      const y = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
+      SAVE.dailyStreak = SAVE.lastDaily === y ? SAVE.dailyStreak + 1 : 1;
+      SAVE.lastDaily = gameCfg.dateStr;
+      const extra = Math.min(25, 5 * (SAVE.dailyStreak - 1));
+      if (extra > 0) {
+        SAVE.rp += extra;
+        toast(`🔥 <b>${SAVE.dailyStreak}-day streak!</b> +${extra} bonus RP`);
+      }
+    }
     SAVE.dailyDone[gameCfg.dateStr] = true;
   }
   saveSave();
@@ -527,6 +570,77 @@ function refreshInfoPanel() {
   });
 }
 
+// ---- wave preview + enemy intros ----
+let previewSig = '';
+function refreshWavePreview() {
+  const el = $('#wave-preview');
+  if (!game || game.over || game.waveActive) {
+    if (previewSig !== '') { previewSig = ''; el.innerHTML = ''; }
+    return;
+  }
+  const items = game.previewNextWave();
+  const sig = items.map(i => i.type + i.n).join(',');
+  if (sig === previewSig) return;
+  previewSig = sig;
+  el.innerHTML = 'Next: ' + items.map(i => {
+    const d = ENEMIES[i.type];
+    const warn = d.flying ? ' ✈' : d.stealth ? ' 👁' : (d.armor || 0) >= 5 ? ' 🛡' : '';
+    return `<span class="wp-item" title="${d.name}">${d.icon}×${i.n}${warn}</span>`;
+  }).join(' ');
+}
+
+function enemyTraits(d) {
+  const t = [];
+  if (d.boss) t.push('BOSS');
+  if (d.flying) t.push("flying — cannons can't hit it");
+  if (d.stealth) t.push('stealth — needs a Beacon or Recon Sniper');
+  if (d.armor) t.push(`${d.armor} armor — blunts every hit`);
+  if (d.regen) t.push('regenerates health');
+  if (d.spawnOnDeath) t.push('splits when killed');
+  if (d.speed >= 90) t.push('very fast');
+  if (d.packs) t.push('attacks in packs');
+  return t.length ? t.join(' · ') : 'no special traits';
+}
+function announceNewEnemies() {
+  if (!game) return;
+  if (!SAVE.seenEnemies) SAVE.seenEnemies = {};
+  const seen = SAVE.seenEnemies;
+  const fresh = new Set();
+  for (const s of game.spawnQueue) if (!seen[s.type]) fresh.add(s.type);
+  let i = 0;
+  for (const type of fresh) {
+    seen[type] = true;
+    const d = ENEMIES[type];
+    setTimeout(() => toast(`${d.icon} <b>New enemy: ${d.name}</b><br>${enemyTraits(d)}`), i * 1200);
+    i++;
+  }
+  if (fresh.size) saveSave();
+}
+
+// ---- tutorial (first campaign game) ----
+let tutStep = -1;
+const TUT_STEPS = [
+  { text: '🔫 Pick the <b>Gunner</b> below (or press <b>1</b>), then click a grass tile next to the road.', done: g => g.towers.length > 0 },
+  { text: '⚔️ Your <b>hero</b> stands on the road. Click them, then click where they should hold the line.', done: g => g.selectedHero || g.towers.length >= 2 },
+  { text: '▶ Press <b>Send Wave</b> when ready. Sending early pays bonus gold!', done: g => g.wave > 0 },
+  { text: '⬆ Click any tower to open its <b>two upgrade paths</b>. Hover towers to see exact damage.', done: g => g.towers.some(t => t.levels[0] + t.levels[1] > 0) || g.wave >= 3 },
+];
+function refreshTutorial() {
+  const bar = $('#tut-bar');
+  if (!game || SAVE.tutorialDone || gameCfg.mode === 'sandbox') { bar.classList.add('hidden'); return; }
+  if (tutStep >= TUT_STEPS.length) {
+    SAVE.tutorialDone = true;
+    saveSave();
+    bar.classList.add('hidden');
+    return;
+  }
+  if (tutStep < 0) tutStep = 0;
+  const step = TUT_STEPS[tutStep];
+  if (step.done(game)) { tutStep++; return; }
+  bar.innerHTML = step.text;
+  bar.classList.remove('hidden');
+}
+
 // ---- HUD ----
 function refreshHUD() {
   if (!game) return;
@@ -548,6 +662,7 @@ function refreshHUD() {
   $('#btn-speed').textContent = SPEEDS[speedIdx] + '×';
   $('#btn-pause').textContent = game.paused ? '▶' : '⏸';
   $('#btn-sound').textContent = Sound.on ? '🔊' : '🔇';
+  $('#btn-music').classList.toggle('off', !SAVE.music);
 
   for (const { id, el } of buildBtns) {
     el.classList.toggle('selected', game.buildType === id);
@@ -571,8 +686,16 @@ $('#btn-sound').addEventListener('click', () => {
   SAVE.sound = Sound.on;
   saveSave();
 });
+$('#btn-music').addEventListener('click', () => {
+  SAVE.music = !SAVE.music;
+  Music.on = SAVE.music;
+  if (SAVE.music) Music.start(); else Music.stop();
+  saveSave();
+});
 $('#btn-quit').addEventListener('click', () => {
   if (!game) return;
+  persistHero();
+  saveSave();
   if (!game.over) {
     if (!confirm('Abandon this run? You keep Research Points for cleared waves.')) return;
     const cleared = game.waveActive ? game.wave - 1 : game.wave;
@@ -681,9 +804,12 @@ function loop(now) {
     for (let i = 0; i < SPEEDS[speedIdx]; i++) game.update(STEP);
     acc -= STEP;
   }
+  Music.intensity = game.waveActive ? 1 : 0;
   game.render(ctx);
   refreshHUD();
   refreshInfoPanel();
+  refreshWavePreview();
+  refreshTutorial();
 }
 
 renderMenu();

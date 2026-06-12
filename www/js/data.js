@@ -205,17 +205,17 @@ const HERO_ORDER = ['aldric', 'lyra', 'magnus', 'mercy', 'korg'];
 
 // wcost = budget cost when the wave generator buys this enemy.
 const ENEMIES = {
-  runt:        { name: 'Runt', hp: 22, speed: 55, bounty: 4, lives: 1, radius: 9, color: '#e05c5c', wcost: 4, minWave: 1 },
-  sprinter:    { name: 'Sprinter', hp: 15, speed: 105, bounty: 5, lives: 1, radius: 8, color: '#f2a33c', wcost: 5, minWave: 3 },
-  swarmling:   { name: 'Swarmling', hp: 9, speed: 80, bounty: 2, lives: 1, radius: 6, color: '#d98ce0', wcost: 2, minWave: 5, packs: true },
-  brute:       { name: 'Brute', hp: 95, speed: 36, armor: 3, bounty: 12, lives: 2, radius: 13, color: '#b04a4a', wcost: 13, minWave: 6 },
-  winged:      { name: 'Winged', hp: 34, speed: 72, flying: true, bounty: 8, lives: 1, radius: 9, color: '#7ec8e3', wcost: 9, minWave: 8 },
-  phantom:     { name: 'Phantom', hp: 48, speed: 62, stealth: true, bounty: 10, lives: 1, radius: 9, color: '#9b9bd6', wcost: 11, minWave: 10 },
-  regenerator: { name: 'Regenerator', hp: 85, speed: 46, regen: 7, bounty: 12, lives: 2, radius: 11, color: '#6fce6f', wcost: 13, minWave: 12 },
-  shellback:   { name: 'Shellback', hp: 75, speed: 30, armor: 8, bounty: 14, lives: 2, radius: 12, color: '#8d9db6', wcost: 16, minWave: 14 },
-  splitter:    { name: 'Splitter', hp: 55, speed: 55, bounty: 10, lives: 2, radius: 11, color: '#e0c95c', wcost: 12, minWave: 16, spawnOnDeath: { type: 'swarmling', count: 3 } },
-  juggernaut:  { name: 'Juggernaut', hp: 1600, speed: 22, armor: 10, bounty: 150, lives: 10, radius: 18, color: '#ff5577', boss: true, wcost: 0, minWave: 99 },
-  wyvern:      { name: 'Wyvern', hp: 1000, speed: 36, flying: true, bounty: 150, lives: 10, radius: 16, color: '#66e0ff', boss: true, wcost: 0, minWave: 99 },
+  runt:        { icon: '👹', name: 'Runt', hp: 22, speed: 55, bounty: 4, lives: 1, radius: 9, color: '#e05c5c', wcost: 4, minWave: 1 },
+  sprinter:    { icon: '🐆', name: 'Sprinter', hp: 15, speed: 105, bounty: 5, lives: 1, radius: 8, color: '#f2a33c', wcost: 5, minWave: 3 },
+  swarmling:   { icon: '🐜', name: 'Swarmling', hp: 9, speed: 80, bounty: 2, lives: 1, radius: 6, color: '#d98ce0', wcost: 2, minWave: 5, packs: true },
+  brute:       { icon: '🛡', name: 'Brute', hp: 95, speed: 36, armor: 3, bounty: 12, lives: 2, radius: 13, color: '#b04a4a', wcost: 13, minWave: 6 },
+  winged:      { icon: '🦅', name: 'Winged', hp: 34, speed: 72, flying: true, bounty: 8, lives: 1, radius: 9, color: '#7ec8e3', wcost: 9, minWave: 8 },
+  phantom:     { icon: '👻', name: 'Phantom', hp: 48, speed: 62, stealth: true, bounty: 10, lives: 1, radius: 9, color: '#9b9bd6', wcost: 11, minWave: 10 },
+  regenerator: { icon: '🧟', name: 'Regenerator', hp: 85, speed: 46, regen: 7, bounty: 12, lives: 2, radius: 11, color: '#6fce6f', wcost: 13, minWave: 12 },
+  shellback:   { icon: '🐢', name: 'Shellback', hp: 75, speed: 30, armor: 8, bounty: 14, lives: 2, radius: 12, color: '#8d9db6', wcost: 16, minWave: 14 },
+  splitter:    { icon: '🫧', name: 'Splitter', hp: 55, speed: 55, bounty: 10, lives: 2, radius: 11, color: '#e0c95c', wcost: 12, minWave: 16, spawnOnDeath: { type: 'swarmling', count: 3 } },
+  juggernaut:  { icon: '🤖', name: 'Juggernaut', hp: 1600, speed: 22, armor: 10, bounty: 150, lives: 10, radius: 18, color: '#ff5577', boss: true, wcost: 0, minWave: 99 },
+  wyvern:      { icon: '🐉', name: 'Wyvern', hp: 1000, speed: 36, flying: true, bounty: 150, lives: 10, radius: 16, color: '#66e0ff', boss: true, wcost: 0, minWave: 99 },
 };
 
 // Path maps: waypoint lists in cell coords (off-grid endpoints = edge spawn/exit).

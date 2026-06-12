@@ -291,3 +291,17 @@ body {
 #tt .tt-cost { color: var(--gold); font-size: 11px; }
 #tt .tt-desc { color: var(--dim); margin: 3px 0 5px; }
 #tt .tt-stats { color: var(--text); line-height: 1.45; }
+
+.hud-btn.off { opacity: .35; }
+
+/* ===== Wave preview + tutorial ===== */
+#wave-preview { font-size: 13px; color: var(--dim); margin-left: 10px; }
+#wave-preview .wp-item { margin-right: 8px; color: var(--text); }
+#tut-bar {
+  position: absolute; left: 10px; bottom: 10px; max-width: 46%;
+  background: rgba(10, 16, 26, .92); border: 1px solid var(--gold);
+  border-radius: 8px; padding: 9px 12px; font-size: 13px; line-height: 1.4;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .5); pointer-events: none;
+  animation: tutpulse 2s ease-in-out infinite;
+}
+@keyframes tutpulse { 0%, 100% { border-color: var(--gold); } 50% { border-color: #fde68a; box-shadow: 0 0 16px rgba(251,191,36,.25); } }
