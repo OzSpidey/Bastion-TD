@@ -39,6 +39,7 @@ const Sound = {
     lose:    [220, 55, 1.0, 'sawtooth', 0.1],
     win:     [523, 1046, 0.6, 'sine', 0.08],
     freeze:  [1200, 400, 0.3, 'sine', 0.06],
+    roar:    [120, 35, 0.7, 'sawtooth', 0.09],
   },
   play(name) {
     if (!this.on) return;
@@ -2515,6 +2516,7 @@ class Game {
     const label = this.omenWave ? '\ud83c\udf11 OMEN WAVE ' + this.wave : (isBoss ? '\u2620 BOSS ' : '') + 'WAVE ' + this.wave;
     this.addFx({ type: 'banner', t: 0, dur: 1.8, str: label, color: this.omenWave ? '#c084fc' : isBoss ? '#ff5577' : '#e2e8f0' });
     if (this.omenWave) this.addFx({ type: 'text', x: COLS * CELL / 2, y: CELL * ROWS * 0.34 + 44, t: 0, dur: 2.2, str: 'Enemies +50% HP \u00b7 double bounty', color: '#c084fc' });
+    if (isBoss) Sound.play('roar');
     Sound.play('wave');
     this.emit('onWave', this.wave);
   }

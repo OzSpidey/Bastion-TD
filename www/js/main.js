@@ -312,6 +312,7 @@ const SETTING_DEFS = [
   ['music', '🎵 Music'],
   ['shake', '💥 Screen shake'],
   ['dmgNums', '🔢 Damage numbers'],
+  ['autoSend', '⏩ Auto-send waves'],
 ];
 function renderSettings() {
   const list = $('#settings-list');
@@ -326,6 +327,8 @@ function renderSettings() {
       SAVE[key] = !SAVE[key];
       if (key === 'sound') Sound.on = SAVE.sound;
       if (key === 'music') { Music.on = SAVE.music; if (SAVE.music) Music.start(); else Music.stop(); }
+      if (key === 'autoSend' && game) game.autoSend = SAVE.autoSend;
+      if (key === 'autoSend') $('#btn-autosend').classList.toggle('on', !!SAVE.autoSend);
       if (game) game.settings = { shake: SAVE.shake, dmgNums: SAVE.dmgNums };
       saveSave();
       renderSettings();
@@ -342,6 +345,9 @@ function renderSettings() {
     ['💀 Bosses killed', SAVE.bossKills], ['⭐ Stars earned', starsTotal()],
     ['🔬 Research points earned', SAVE.rp], ['🦸 Total hero levels', heroLvls],
     ['♾️ Best endless wave', SAVE.bestEndless || 0], ['🌀 Best maze wave', SAVE.bestMaze || 0],
+    ['💎 Relics claimed', SAVE.relicsClaimed || 0],
+    ['🛡 Iron challenges cleared', Object.keys(SAVE.ironWins || {}).length],
+    ['🔗 Synergies discovered', Object.keys(SAVE.synergiesFound || {}).length + '/' + SYNERGIES.length],
   ].map(([k, v]) => `<div class="stat-card"><div class="sc-num">${v}</div><div class="sc-label">${k}</div></div>`).join('');
 }
 $('#btn-settings').addEventListener('click', () => { renderSettings(); show('screen-settings'); });
@@ -462,6 +468,7 @@ function startGame(cfg) {
   });
   game.autoSend = !!SAVE.autoSend;
   ascendSeen = false;
+  runBoons = [];
   // restore the hero's persistent level
   if (game.hero) {
     const hx = SAVE.heroXp[SAVE.hero];
@@ -564,12 +571,14 @@ function handleEnd(res) {
       <p class="rp-earned">🔬 +${res.rp} Research Points</p>
       <div class="btn-row">
         <button id="ov-replay">↻ Replay</button>
+        <button id="ov-card">📸 Save card</button>
         ${gameCfg.mode === 'daily' ? '<button id="ov-share">📋 Share</button>' : ''}
         <button id="ov-menu">🏠 Menu</button>
       </div>
     </div>`);
   $('#ov-replay').addEventListener('click', () => startGame(gameCfg));
   $('#ov-menu').addEventListener('click', goMenu);
+  $('#ov-card').addEventListener('click', () => shareResultCard(res));
   const shareBtn = $('#ov-share');
   if (shareBtn) {
     shareBtn.addEventListener('click', () => {
@@ -587,6 +596,83 @@ function handleEnd(res) {
       );
     });
   }
+}
+
+// ---- shareable result card: rendered client-side, shared or downloaded as PNG ----
+function shareResultCard(res) {
+  const cv = document.createElement('canvas');
+  cv.width = 840; cv.height = 440;
+  const x = cv.getContext('2d');
+  // dark background with a subtle gradient + top glow
+  const bg = x.createLinearGradient(0, 0, 0, cv.height);
+  bg.addColorStop(0, '#101a28');
+  bg.addColorStop(0.55, '#0c1118');
+  bg.addColorStop(1, '#0a1622');
+  x.fillStyle = bg;
+  x.fillRect(0, 0, cv.width, cv.height);
+  const glow = x.createRadialGradient(cv.width / 2, 90, 30, cv.width / 2, 90, 420);
+  glow.addColorStop(0, 'rgba(251,191,36,0.08)');
+  glow.addColorStop(1, 'rgba(251,191,36,0)');
+  x.fillStyle = glow;
+  x.fillRect(0, 0, cv.width, cv.height);
+  x.strokeStyle = 'rgba(251,191,36,0.4)';
+  x.lineWidth = 3;
+  x.strokeRect(12, 12, cv.width - 24, cv.height - 24);
+  x.textAlign = 'center';
+  // title
+  x.fillStyle = '#fbbf24';
+  x.font = 'bold 46px Georgia, "Times New Roman", serif';
+  x.fillText('BASTION TD', cv.width / 2, 82);
+  // map · mode · difficulty
+  const modeNames = {
+    campaign: 'Campaign', endless: 'Endless', maze: 'Maze', bossrush: 'Boss Rush',
+    daily: 'Daily Challenge', sandbox: 'Sandbox', iron: 'Iron Challenge',
+  };
+  const sub = [gameCfg.map.name, modeNames[gameCfg.mode] || gameCfg.mode,
+    gameCfg.diffIndex != null ? DIFFICULTIES[gameCfg.diffIndex].name : ''].filter(Boolean).join(' · ');
+  x.fillStyle = '#8b98ab';
+  x.font = '22px system-ui, sans-serif';
+  x.fillText(sub, cv.width / 2, 122);
+  // big wave count
+  x.fillStyle = res.won ? '#4ade80' : '#e2e8f0';
+  x.font = 'bold 96px system-ui, sans-serif';
+  x.fillText(`WAVE ${res.wavesCleared}`, cv.width / 2, 240);
+  // stars (campaign win)
+  let statsY = 310;
+  if (gameCfg.mode === 'campaign' && res.won) {
+    x.font = '44px system-ui, sans-serif';
+    [0, 1, 2].forEach(i => {
+      x.fillStyle = i < res.stars ? '#fbbf24' : '#3a4456';
+      x.fillText('★', cv.width / 2 + (i - 1) * 56, 300);
+    });
+    statsY = 348;
+  }
+  // stats line
+  const heroTxt = game && game.hero ? ` · 🦸 ${game.hero.def.name} Lv ${game.hero.lvl}` : '';
+  x.fillStyle = '#cbd5e1';
+  x.font = '24px system-ui, sans-serif';
+  x.fillText(`⚔️ ${res.kills} kills · 🔥 combo x${game ? game.stats.bestCombo : 0} · 🔗 ${game ? game.stats.maxSynergies : 0} synergies${heroTxt}`,
+    cv.width / 2, statsY);
+  // url
+  x.fillStyle = '#5b687b';
+  x.font = '20px system-ui, sans-serif';
+  x.fillText('ozspidey.github.io/Bastion-TD', cv.width / 2, cv.height - 36);
+
+  const download = () => {
+    const a = document.createElement('a');
+    a.download = 'bastion-result.png';
+    a.href = cv.toDataURL('image/png');
+    a.click();
+    toast('📸 Result card saved!');
+  };
+  cv.toBlob(blob => {
+    const file = blob && typeof File !== 'undefined' ? new File([blob], 'bastion-result.png', { type: 'image/png' }) : null;
+    if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+      navigator.share({ files: [file], title: 'Bastion TD' }).then(
+        () => toast('📸 Result card shared!'),
+        () => download());
+    } else download();
+  });
 }
 
 function goMenu() {
@@ -877,6 +963,7 @@ function refreshTutorial() {
 
 // ---- boon draft: pick 1 of 3 every 5th wave ----
 let boonRerolled = false;
+let runBoons = []; // boons chosen this run, for the pause summary
 function pickBoons(n) {
   const pool = BOONS.slice();
   const out = [];
@@ -907,6 +994,7 @@ function renderBoonCards(boons) {
     el.addEventListener('click', () => {
       const b = boons[+el.dataset.i];
       b.apply(game);
+      runBoons.push(b);
       toast(`${b.icon} <b>${b.name}</b> — ${b.desc}`);
       Sound.play('upgrade');
       hideOverlay();
@@ -1041,7 +1129,18 @@ function togglePause() {
   if (!game || game.over) return;
   game.paused = !game.paused;
   if (game.paused) {
-    showOverlay('<div class="overlay-box"><h2>⏸ Paused</h2><p>Press Space or click to resume</p></div>');
+    const rows = [`🌊 Wave <b>${game.wave}${game.totalWaves ? '/' + game.totalWaves : ''}</b>`];
+    if (game.hero) rows.push(`🦸 <b>${game.hero.def.name}</b> · Lv ${game.hero.lvl}`);
+    const synCount = new Set(game.activeSynergies.map(s => s.name)).size;
+    rows.push(`🔗 Active synergies: <b>${synCount}</b>`);
+    if (runBoons.length) rows.push('⚜️ Boons: ' + runBoons.map(b => `${b.icon} ${b.name}`).join(' · '));
+    if (game.curses.length) rows.push('☠ Curses: ' + game.curses.map(c => `${c.icon} ${c.name}`).join(' · '));
+    showOverlay(`
+      <div class="overlay-box">
+        <h2>⏸ Paused</h2>
+        ${rows.map(r => `<p>${r}</p>`).join('')}
+        <p class="hint">Press Space or click to resume</p>
+      </div>`);
     $('#overlay').addEventListener('click', togglePause, { once: true });
   } else hideOverlay();
 }
