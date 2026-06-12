@@ -702,7 +702,7 @@ function buildBuildBar() {
     const def = TOWERS[id];
     const b = document.createElement('button');
     b.className = 'build-btn';
-    b.innerHTML = `<span class="b-icon">${def.icon}</span><span class="b-name">${def.name}</span><span class="b-cost">$${game.towerCost(id)}</span>`;
+    b.innerHTML = `<img class="b-img" src="assets/towers/${id}.png?v=2" onerror="this.outerHTML='<span class=b-icon>${def.icon}</span>'"><span class="b-name">${def.name}</span><span class="b-cost">$${game.towerCost(id)}</span>`;
     b.addEventListener('click', () => { toggleBuild(id); hideBuildTip(); });
     b.addEventListener('mouseenter', () => showBuildTip(b, id, i));
     b.addEventListener('mouseleave', hideBuildTip);
@@ -717,7 +717,7 @@ function showBuildTip(btn, id, idx) {
   const def = TOWERS[id];
   const stats = new Tower(game, id, -5, -5, 0).stats;
   const tt = $('#tt');
-  tt.innerHTML = `<b>${def.icon} ${def.name}</b> <span class="tt-cost">$${game.towerCost(id)} · [${idx + 1}]</span>
+  tt.innerHTML = `<img class="tt-img" src="assets/towers/${id}.png?v=2" onerror="this.remove()"><b>${def.name}</b> <span class="tt-cost">$${game.towerCost(id)} · [${idx + 1}]</span>
     <div class="tt-desc">${def.desc}</div>
     <div class="tt-stats">${fmtStats(stats, game).split(' · ').join('<br>')}</div>`;
   tt.classList.remove('hidden');
@@ -811,7 +811,10 @@ function refreshInfoPanel() {
     if (sel) {
       const head = document.createElement('div');
       const selName = (sel.vetName ? `\u201c${sel.vetName}\u201d ` : '') + sel.def.name + (sel.ascended ? ' \u2728' : '') + (sel.rank ? ' ' + '\u2605'.repeat(sel.rank) : '');
-      head.innerHTML = `<h3>${sel.def.icon} ${selName}</h3><p class="tstats">${fmtStats(sel.stats, game)}</p>`;
+      head.innerHTML = `<div class="hero-head">
+        <img class="hero-portrait" src="assets/towers/${sel.type}.png?v=2" onerror="this.remove()">
+        <div><h3>${selName}</h3><p class="tstats">${fmtStats(sel.stats, game)}</p></div>
+      </div>`;
       panel.appendChild(head);
       sel.def.paths.forEach((path, p) => {
         const wrap = document.createElement('div');
