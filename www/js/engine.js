@@ -163,7 +163,7 @@ const VET_NAMES = ['Old Marta', 'Ironjaw', 'The Whisper', 'Big Bess', 'Grudgekee
 // Drop transparent PNGs at www/assets/towers/<id>.png (top-down, facing right)
 // or www/assets/enemies/<id>.png and they replace the built-in vector art.
 const Sprites = {
-  towers: {}, enemies: {}, heroes: {},
+  towers: {}, enemies: {}, heroes: {}, maps: {},
   load() {
     const tryLoad = (store, key, url) => {
       const img = new Image();
@@ -175,6 +175,8 @@ const Sprites = {
     tryLoad(this.towers, 'militia', 'assets/towers/militia.png' + V);
     for (const id in ENEMIES) tryLoad(this.enemies, id, 'assets/enemies/' + id + '.png' + V);
     for (const id in HEROES) tryLoad(this.heroes, id, 'assets/heroes/' + id + '.png' + V);
+    // hand-painted full-battlefield terrain (optional, per map)
+    for (const m of MAPS) tryLoad(this.maps, m.id, 'assets/maps/' + m.id + '.jpg');
   },
 };
 if (typeof document !== 'undefined') Sprites.load();
@@ -3219,6 +3221,14 @@ class Game {
     const cv = document.createElement('canvas');
     cv.width = W; cv.height = H;
     const x = cv.getContext('2d');
+    // hand-painted battlefield: the art already contains ground, road,
+    // water, decor, gate and keep — draw it and skip procedural painting.
+    const painted = Sprites.maps[this.map.id];
+    if (painted && painted.complete) {
+      x.drawImage(painted, 0, 0, W, H);
+      this._paintedApplied = true;
+      return cv;
+    }
     const theme = THEMES[this.map.theme] || THEMES.grass;
     const rng = mulberry32(hashStr('terrain:' + this.map.id));
 
@@ -3413,6 +3423,9 @@ class Game {
 
   render(ctx) {
     const W = COLS * CELL, H = ROWS * CELL;
+    // painted terrain may finish loading after the Game constructed:
+    // cheap one-time check per frame until it applies
+    if (!this._paintedApplied && Sprites.maps[this.map.id]) this.terrain = this.renderTerrain();
     ctx.clearRect(0, 0, W, H);
     ctx.save();
     if (this.shakeT > 0) {

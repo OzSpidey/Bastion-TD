@@ -253,7 +253,7 @@ const CURSES = [
 // Tap-to-trigger environmental strikes ($90, 40s cooldown, big blast).
 const MAP_HAZARDS = {
   meadow: [[8, 5], [13, 6]],
-  riverbend: [[10, 2], [8, 6]],
+  riverbend: [[4, 2], [13, 9]],
   switchback: [[9, 4], [9, 7]],
   crossroads: [[10, 4], [15, 6]],
   spiral: [[9, 3], [8, 8]],
@@ -347,7 +347,49 @@ const MAPS = [
     paths: [[[-1, 6], [3, 6], [3, 2], [8, 2], [8, 9], [13, 9], [13, 4], [20, 4]]] },
   { id: 'riverbend', name: 'Riverbend', type: 'path', diffStars: 1, theme: 'autumn',
     desc: 'Long straights reward long-range towers.',
-    paths: [[[-1, 2], [16, 2], [16, 6], [3, 6], [3, 10], [20, 10]]] },
+    // hand-painted battlefield (assets/maps/riverbend.jpg): the path traces
+    // the painted road: cave -> rune plaza -> around the crag -> upper bridge
+    // -> winding descent -> ford -> castle.
+    paths: [[[2, 1], [3, 2], [4, 3], [6, 3], [7, 4], [9, 4], [10, 3], [10, 2], [11, 1], [13, 1], [14, 2], [15, 2], [16, 3], [16, 4], [14, 6], [13, 6], [13, 9], [14, 10], [16, 10]]],
+    blocked: [
+      // canyon cliffs / cave structure (north rim)
+      [0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0], [8, 0], [9, 0], [10, 0],
+      [0, 1], [1, 1], [3, 1], [4, 1], [5, 1], [6, 1], [7, 1], [8, 1], [9, 1],
+      [0, 2], [1, 2], [2, 2],
+      // central crag rocks + waterfall stream
+      [7, 2], [8, 2], [9, 2], [7, 3], [8, 3], [9, 3], [6, 2], [6, 4], [6, 5],
+      // river: top pool, channel under the upper bridge, main bridge stretch,
+      // lower run and the bottom pool
+      [11, 0], [12, 0], [13, 0],
+      [11, 2], [12, 2], [11, 3], [11, 4],
+      [7, 5], [8, 5], [9, 5], [10, 5],
+      [6, 6], [7, 6], [8, 6], [9, 6], [10, 6],
+      [7, 7], [8, 7], [9, 7], [10, 7],
+      [6, 8], [7, 8], [8, 8], [9, 8], [10, 8], [11, 8],
+      [5, 9], [6, 9], [7, 9], [8, 9], [9, 9],
+      [4, 10], [5, 10], [6, 10], [7, 10], [8, 10],
+      [4, 11], [5, 11], [6, 11],
+      // east water branch curling around the castle
+      [12, 8], [14, 7], [15, 7], [16, 7], [17, 7], [17, 6], [18, 6],
+      // east standing-stone ruins
+      [12, 3], [13, 3], [12, 4], [13, 4], [14, 3], [14, 4],
+      // west rocks, spire and ruined pillars
+      [4, 4], [5, 4], [5, 7], [1, 7], [2, 7], [1, 8], [2, 8], [2, 9], [3, 9],
+      // west / northwest cliff edge
+      [0, 3], [0, 4], [0, 5],
+      // northeast forest and cliffs
+      [14, 0], [15, 0], [16, 0], [16, 1],
+      [17, 0], [18, 0], [19, 0], [17, 1], [18, 1], [19, 1], [18, 2], [19, 2],
+      [17, 2], [18, 3], [19, 3], [18, 4], [19, 4], [17, 5], [18, 5], [19, 5], [18, 6], [19, 6],
+      // castle footprint
+      [15, 8], [16, 8], [17, 8], [18, 8], [19, 8],
+      [16, 9], [17, 9], [18, 9], [19, 9],
+      [17, 10], [18, 10], [19, 10],
+      [14, 11], [15, 11], [16, 11], [17, 11], [18, 11], [19, 11],
+      // southwest forest, bottom pines
+      [0, 9], [1, 9], [0, 10], [1, 10], [2, 10], [0, 11], [1, 11], [2, 11], [3, 11],
+      [10, 11], [11, 11], [12, 11], [13, 11],
+    ] },
   { id: 'switchback', name: 'Switchback Canyon', type: 'path', diffStars: 2, theme: 'canyon',
     desc: 'Four hairpins. The kill zone is yours to pick.',
     paths: [[[-1, 1], [18, 1], [18, 4], [1, 4], [1, 7], [18, 7], [18, 10], [-1, 10]]] },
