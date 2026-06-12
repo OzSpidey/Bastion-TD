@@ -449,3 +449,11 @@ body {
 .ascend-btn b { color: var(--gold); }
 
 .hc-img { width: 44px; height: 44px; object-fit: contain; }
+
+/* hero portrait in info panel */
+.hero-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.hero-portrait {
+  width: 58px; height: 58px; object-fit: contain; flex-shrink: 0;
+  background: radial-gradient(circle at 40% 35%, var(--panel2), var(--panel));
+  border: 1px solid var(--gold); border-radius: 10px; padding: 3px;
+}

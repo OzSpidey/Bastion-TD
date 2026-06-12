@@ -652,7 +652,13 @@ function refreshInfoPanel() {
     if (hero) {
       const h = hero.def;
       panel.innerHTML = `
-        <h3>${h.icon} ${h.name} <small>Lv ${hero.lvl}</small></h3>
+        <div class="hero-head">
+          <img class="hero-portrait" src="assets/heroes/${hero.id}.png?v=2" onerror="this.style.display='none'">
+          <div>
+            <h3>${h.name} <small>Lv ${hero.lvl}</small></h3>
+            <p class="tstats">${h.title}</p>
+          </div>
+        </div>
         <p class="tstats">${hero.alive
           ? `HP ${Math.ceil(hero.hp)}/${hero.maxHp} · Damage ${Math.round(hero.dmg)} · ${h.blocks > 1 ? 'Blocks ' + h.blocks : 'Blocks 1'}`
           : `☠ Respawns in ${Math.ceil(hero.respawnT)}s`}</p>
