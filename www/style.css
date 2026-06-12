@@ -447,3 +447,5 @@ body {
 /* ===== Ascension ===== */
 .ascend-btn { border-color: var(--gold) !important; color: var(--text); }
 .ascend-btn b { color: var(--gold); }
+
+.hc-img { width: 44px; height: 44px; object-fit: contain; }

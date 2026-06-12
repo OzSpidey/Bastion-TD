@@ -191,7 +191,8 @@ function renderHeroStrip() {
     const b = document.createElement('button');
     b.className = 'hero-chip' + (SAVE.hero === id ? ' sel' : '');
     const hlvl = (SAVE.heroXp[id] && SAVE.heroXp[id].lvl) || 1;
-    b.innerHTML = `<span class="hc-icon">${h.icon}</span><span class="hc-name">${h.name}</span><span class="hc-title">${h.title} · Lv ${hlvl}</span>`;
+    b.innerHTML = `<img class="hc-img" src="assets/heroes/${id}.png?v=2" onerror="this.outerHTML='<span class=hc-icon>${h.icon}</span>'">
+      <span class="hc-name">${h.name}</span><span class="hc-title">${h.title} · Lv ${hlvl}</span>`;
     b.title = `${h.desc}\n${h.ability.name}: ${h.ability.desc}`;
     b.addEventListener('click', () => {
       SAVE.hero = id;
