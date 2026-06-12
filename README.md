@@ -20,11 +20,15 @@ A production tower defense game built from the best ideas in the genre. One Java
 
 ## Features
 
-1. **6 modes**: Campaign (5 maps, 3 difficulties, 45 stars), Endless, Maze (flow-field pathfinding), Boss Rush, date-seeded Daily Challenge with mutators, Sandbox.
-2. **9 towers**, each with 2 upgrade paths of 3 tiers.
-3. **11 enemy types**: armor, flying, stealth, regeneration, splitting, swarms, 2 bosses.
-4. **3 commander abilities**, 8 permanent research perks, 10 achievements.
-5. Touch and mouse input, responsive layout, save data in localStorage.
+1. **6 modes**: Campaign (7 maps, 3 difficulties, 63 stars), Endless, Maze (flow-field pathfinding), Boss Rush, date-seeded Daily Challenge with mutators + streak bonuses, Sandbox.
+2. **10 maps, 7 painterly themes**: grass, autumn, canyon, snow, twilight, volcanic (glowing lava cracks), desert oasis.
+3. **9 towers**, each with 2 upgrade paths of 3 tiers, exact-stat hover tooltips and per-tower damage tallies.
+4. **5 heroes** (tank / archer / fire mage / cleric / demolitionist) that block enemies, level up persistently across matches and auto-cast signature abilities.
+5. **11 enemy types**: armor, flying, stealth, regeneration, splitting, swarms, 2 bosses; first-encounter intro cards.
+6. **3 commander abilities**, 8 permanent research perks, 10 achievements, lifetime statistics.
+7. **Juice**: per-tower attack effects (chained lightning, lobbed shells, rocket trails, venom splats), particles, screen shake, floating damage numbers, hit flashes, procedural chiptune music with battle intensity.
+8. Wave preview with threat warnings, contextual first-game tutorial, animated menu, victory confetti.
+9. Touch and mouse input, responsive layout, save data in localStorage, zero data collection ([privacy](www/privacy.html)).
 
 ## Custom art
 
@@ -32,6 +36,7 @@ The game ships with procedural vector art: rotating turrets with recoil and muzz
 
 1. `www/assets/towers/<id>.png` (top-down, facing right): gunner, cannon, frost, tesla, venom, sniper, missile, bank, beacon
 2. `www/assets/enemies/<id>.png` (top-down, facing up): runt, sprinter, swarmling, brute, winged, phantom, regenerator, shellback, splitter, juggernaut, wyvern
+3. `www/assets/heroes/<id>.png` (3/4 view, facing right): aldric, lyra, magnus, mercy, korg
 
 The engine detects them at load time, no code changes needed. Towers render at 44px and enemies at about 2.7x their radius, so 128px or 256px source images are plenty.
 
