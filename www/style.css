@@ -147,6 +147,12 @@ body {
   padding: 8px 14px; margin-bottom: 10px;
 }
 .stat { font-size: 16px; font-weight: 600; min-width: 86px; }
+.stat.hurt { animation: livesFlash .6s ease-out; }
+@keyframes livesFlash {
+  0% { color: #f87171; transform: scale(1.3); }
+  60% { color: #f87171; transform: scale(1.05); }
+  100% { color: inherit; transform: scale(1); }
+}
 .spacer { flex: 1; }
 .hud-btn {
   background: var(--panel2); border: 1px solid var(--line); color: var(--text);
@@ -223,6 +229,12 @@ body {
   background: rgba(56, 189, 248, .18); pointer-events: none;
 }
 .ability-btn.armed { border-color: var(--gold); background: #2a2310; }
+.ability-btn .cd-num {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px; font-weight: 800; color: var(--gold);
+  pointer-events: none; text-shadow: 0 1px 4px rgba(0, 0, 0, .95), 0 0 8px rgba(0, 0, 0, .8);
+}
 
 /* ===== Overlay (pause / results) ===== */
 #overlay {
@@ -302,6 +314,7 @@ body {
 /* ===== Wave preview + tutorial ===== */
 #wave-preview { font-size: 13px; color: var(--dim); margin-left: 10px; }
 #wave-preview .wp-item { margin-right: 8px; color: var(--text); }
+#wave-preview .wp-lives { color: var(--red); font-size: 9px; font-weight: 700; margin-left: 1px; }
 #tut-bar {
   position: absolute; left: 10px; bottom: 10px; max-width: 46%;
   background: rgba(10, 16, 26, .92); border: 1px solid var(--gold);

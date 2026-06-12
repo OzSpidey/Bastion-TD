@@ -405,6 +405,15 @@ function drawMenuBg(t) {
 // ============ Game session ============
 let game = null;
 let gameCfg = null;
+let livesFlashT = 0;
+function flashLives() {
+  const el = $('#hud-lives');
+  el.classList.remove('hurt');
+  void el.offsetWidth; // restart the CSS animation
+  el.classList.add('hurt');
+  clearTimeout(livesFlashT);
+  livesFlashT = setTimeout(() => el.classList.remove('hurt'), 600);
+}
 let speedIdx = 0;
 const SPEEDS = [1, 2, 3];
 let infoSig = '';
@@ -431,6 +440,7 @@ function startGame(cfg) {
     settings: { shake: SAVE.shake, dmgNums: SAVE.dmgNums },
     events: {
       onEnd: handleEnd,
+      onLeak: flashLives,
       onWave: () => announceNewEnemies(),
       onBoonDraft: () => showBoonDraft(),
       onRelic: art => {
@@ -749,13 +759,13 @@ function buildAbilityBar() {
   ABILITIES.forEach((a, i) => {
     const b = document.createElement('button');
     b.className = 'ability-btn';
-    b.title = `${a.name} [${'QWE'[i]}] — ${a.desc}`;
+    b.title = `${a.name} [${'QWER'[i]}] — ${a.desc}`;
     b.innerHTML = `${a.spellImg
       ? `<img class="a-img" src="assets/ui/${a.spellImg}.png?v=2" onerror="this.outerHTML='<span class=a-icon>${a.icon}</span>'">`
-      : `<span class="a-icon">${a.icon}</span>`}<span class="a-name">${a.name}</span><div class="cd-fill"></div>`;
+      : `<span class="a-icon">${a.icon}</span>`}<span class="a-name">${a.name}</span><div class="cd-fill"></div><span class="cd-num"></span>`;
     b.addEventListener('click', () => game && game.useAbility(a.id));
     bar.appendChild(b);
-    abilityBtns.push({ id: a.id, el: b, fill: b.querySelector('.cd-fill'), def: a });
+    abilityBtns.push({ id: a.id, el: b, fill: b.querySelector('.cd-fill'), num: b.querySelector('.cd-num'), def: a });
   });
 }
 
@@ -786,6 +796,19 @@ function fmtStats(s, g) {
   return out.join(' · ');
 }
 
+// hero panel Cast button: text + enabled state, updated every frame
+function updateHeroCastBtn(panel, hero) {
+  const btn = panel.querySelector('#btn-herocast');
+  if (!btn) return;
+  const name = hero.def.ability.name;
+  let txt, dis;
+  if (!hero.alive) { txt = `${name} — fallen`; dis = true; }
+  else if (hero.abilityCd > 0) { txt = `${name} — ${Math.ceil(hero.abilityCd)}s`; dis = true; }
+  else { txt = `⚡ Cast ${name}`; dis = false; }
+  if (btn.textContent !== txt) btn.textContent = txt;
+  if (btn.disabled !== dis) btn.disabled = dis;
+}
+
 function refreshInfoPanel() {
   if (!game) return;
   const sel = game.selected;
@@ -813,8 +836,16 @@ function refreshInfoPanel() {
           ? `HP ${Math.ceil(hero.hp)}/${hero.maxHp} · Damage ${Math.round(hero.dmg)} · ${h.blocks > 1 ? 'Blocks ' + h.blocks : 'Blocks 1'}`
           : `☠ Respawns in ${Math.ceil(hero.respawnT)}s`}</p>
         <p class="tstats">XP ${Math.floor(hero.xp)}/${hero.xpNeed}</p>
-        <p class="tstats">${h.ability.img ? `<img class="ab-ico" src="assets/ui/${h.ability.img}.png?v=2">` : '⚡'} <b>${h.ability.name}</b> (auto): ${h.ability.desc}</p>
+        <p class="tstats">${h.ability.img ? `<img class="ab-ico" src="assets/ui/${h.ability.img}.png?v=2">` : '⚡'} <b>${h.ability.name}</b> (manual): ${h.ability.desc}</p>
+        <button id="btn-herocast" class="upg-btn"></button>
         <p class="hint">Click anywhere on the battlefield to move ${h.name.split(' ')[0]}. Right-click to deselect.</p>`;
+      panel.querySelector('#btn-herocast').addEventListener('click', () => {
+        const hh = game.hero;
+        if (!hh || !hh.alive || hh.abilityCd > 0) return;
+        if (hh.castAbility()) hh.abilityCd = hh.def.ability.cd;
+        else game.addFx({ type: 'text', x: hh.x, y: hh.y - 30, t: 0, dur: 0.8, str: 'No targets!', color: '#f87171' });
+      });
+      updateHeroCastBtn(panel, hero);
       return;
     }
     if (sel) {
@@ -832,7 +863,7 @@ function refreshInfoPanel() {
         panel.appendChild(ms);
         const rh = document.createElement('p');
         rh.className = 'hint';
-        rh.textContent = '⚑ Click the road to move the rally point.';
+        rh.textContent = '⚑ Click in range to set the rally point, or drag the flag.';
         panel.appendChild(rh);
       }
       sel.def.paths.forEach((path, p) => {
@@ -898,6 +929,7 @@ function refreshInfoPanel() {
       panel.innerHTML = '<p class="hint">Select a tower type to build, or click a placed tower to manage it.</p>';
     }
   }
+  if (hero) updateHeroCastBtn(panel, hero);
   // live affordability on upgrade buttons
   panel.querySelectorAll('.upg-btn[data-cost]').forEach(b => {
     b.disabled = game.cash < +b.dataset.cost;
@@ -931,7 +963,8 @@ function refreshWavePreview() {
   el.innerHTML = (omen ? '<span class="wp-omen">🌑 OMEN ×2💰</span> ' : '') + 'Next: ' + items.map(i => {
     const d = ENEMIES[i.type];
     const warn = d.flying ? ' ✈' : d.stealth ? ' 👁' : (d.armor || 0) >= 5 ? ' 🛡' : '';
-    return `<span class="wp-item" title="${d.name}">${d.icon}×${i.n}${warn}</span>`;
+    const lives = d.lives > 1 ? `<sup class="wp-lives">-${d.lives}</sup>` : '';
+    return `<span class="wp-item" title="${d.name}${d.lives > 1 ? ` — costs ${d.lives} lives` : ''}">${d.icon}×${i.n}${warn}${lives}</span>`;
   }).join(' ');
 }
 
@@ -1109,6 +1142,8 @@ function refreshHUD() {
     const max = a.def.cd * game.bonuses.cdMul;
     a.el.disabled = cd > 0;
     a.fill.style.height = cd > 0 ? `${(cd / max) * 100}%` : '0';
+    const numTxt = cd > 0 ? String(Math.ceil(cd)) : '';
+    if (a.num.textContent !== numTxt) a.num.textContent = numTxt;
     a.el.classList.toggle('armed', game.armedAbility === a.id);
   }
 }
@@ -1179,13 +1214,59 @@ function canvasPos(clientX, clientY) {
     y: (clientY - rect.top) * (canvas.height / rect.height),
   };
 }
+// rally-flag dragging (barracks): grab the flag of the selected barracks
+let rallyDrag = null;       // tower whose flag is being dragged
+let rallyDragged = false;   // true once a drag happened, to swallow the click
+function rallyGrab(px, py) {
+  const sel = game && game.selected;
+  if (!sel || sel.def.kind !== 'barracks') return false;
+  if (dist2(px, py, sel.rally.x, sel.rally.y) > 16 * 16) return false;
+  rallyDrag = sel;
+  game.rallyPreview = { x: px, y: py };
+  return true;
+}
+function rallyCommit(px, py) {
+  const t = rallyDrag;
+  rallyDrag = null;
+  if (!game) return;
+  game.rallyPreview = null;
+  if (!t) return;
+  // clamp within the barracks' range, then within the battlefield
+  let x = px, y = py;
+  const d = dist(x, y, t.x, t.y);
+  if (d > t.effRange) {
+    x = t.x + (x - t.x) * t.effRange / d;
+    y = t.y + (y - t.y) * t.effRange / d;
+  }
+  t.rally = {
+    x: clamp(x, 12, COLS * CELL - 12),
+    y: clamp(y, 12, ROWS * CELL - 12),
+  };
+  game.addFx({ type: 'text', x: t.rally.x, y: t.rally.y - 8, t: 0, dur: 0.8, str: '⚑', color: '#f8fafc' });
+}
+canvas.addEventListener('mousedown', ev => {
+  if (!game || game.paused || ev.button !== 0) return;
+  const p = canvasPos(ev.clientX, ev.clientY);
+  rallyDragged = false;
+  if (rallyGrab(p.x, p.y)) ev.preventDefault();
+});
 canvas.addEventListener('mousemove', ev => {
   if (!game) return;
   const p = canvasPos(ev.clientX, ev.clientY);
   game.mouse.x = p.x; game.mouse.y = p.y;
+  if (rallyDrag) {
+    game.rallyPreview = { x: p.x, y: p.y };
+    rallyDragged = true;
+  }
+});
+document.addEventListener('mouseup', ev => {
+  if (!rallyDrag) return;
+  const p = canvasPos(ev.clientX, ev.clientY);
+  rallyCommit(p.x, p.y); // releases outside the canvas are clamped into range
 });
 canvas.addEventListener('click', ev => {
   if (!game || game.paused) return;
+  if (rallyDragged) { rallyDragged = false; return; } // drag already set the flag
   const p = canvasPos(ev.clientX, ev.clientY);
   game.handleClick(p.x, p.y);
   infoSig = '';
@@ -1195,7 +1276,23 @@ canvas.addEventListener('touchstart', ev => {
   const t = ev.touches[0];
   const p = canvasPos(t.clientX, t.clientY);
   game.mouse.x = p.x; game.mouse.y = p.y;
+  rallyDragged = false;
+  if (!game.paused) rallyGrab(p.x, p.y);
 }, { passive: true });
+canvas.addEventListener('touchmove', ev => {
+  if (!game || !rallyDrag) return;
+  const t = ev.touches[0];
+  const p = canvasPos(t.clientX, t.clientY);
+  game.mouse.x = p.x; game.mouse.y = p.y;
+  game.rallyPreview = { x: p.x, y: p.y };
+  rallyDragged = true;
+  ev.preventDefault();
+}, { passive: false });
+canvas.addEventListener('touchend', () => {
+  if (!rallyDrag || !game) { rallyDrag = null; return; }
+  const rp = game.rallyPreview;
+  if (rp) rallyCommit(rp.x, rp.y); else { rallyDrag = null; game.rallyPreview = null; }
+});
 canvas.addEventListener('contextmenu', ev => {
   ev.preventDefault();
   if (!game) return;
@@ -1219,6 +1316,7 @@ document.addEventListener('keydown', ev => {
   else if (k === 'q') game.useAbility('airstrike');
   else if (k === 'w') game.useAbility('frostnova');
   else if (k === 'e') game.useAbility('overclock');
+  else if (k === 'r') game.useAbility('reinforce');
   else if (k === 't' && game.selected) {
     game.selected.targetMode = (game.selected.targetMode + 1) % TARGET_MODES.length;
     infoSig = '';

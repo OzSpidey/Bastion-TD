@@ -328,15 +328,15 @@ const ENEMIES = {
   sprinter:    { icon: '🐆', name: 'Sprinter', hp: 15, speed: 105, bounty: 5, lives: 1, radius: 8, color: '#f2a33c', wcost: 5, minWave: 3 },
   swarmling:   { icon: '🐜', name: 'Swarmling', hp: 9, speed: 80, bounty: 2, lives: 1, radius: 6, color: '#d98ce0', wcost: 2, minWave: 5, packs: true },
   brute:       { icon: '🛡', name: 'Brute', hp: 95, speed: 36, armor: 3, bounty: 12, lives: 2, radius: 13, color: '#b04a4a', wcost: 13, minWave: 6 },
-  winged:      { icon: '🦅', name: 'Winged', hp: 34, speed: 72, flying: true, bounty: 8, lives: 1, radius: 9, color: '#7ec8e3', wcost: 9, minWave: 8 },
-  phantom:     { icon: '👻', name: 'Phantom', hp: 48, speed: 62, stealth: true, bounty: 10, lives: 1, radius: 9, color: '#9b9bd6', wcost: 11, minWave: 10 },
+  winged:      { icon: '🦅', name: 'Winged', hp: 34, speed: 72, flying: true, bounty: 8, lives: 2, radius: 9, color: '#7ec8e3', wcost: 9, minWave: 8 },
+  phantom:     { icon: '👻', name: 'Phantom', hp: 48, speed: 62, stealth: true, bounty: 10, lives: 2, radius: 9, color: '#9b9bd6', wcost: 11, minWave: 10 },
   regenerator: { icon: '🧟', name: 'Regenerator', hp: 85, speed: 46, regen: 7, bounty: 12, lives: 2, radius: 11, color: '#6fce6f', wcost: 13, minWave: 12 },
   shellback:   { icon: '🐢', name: 'Shellback', hp: 75, speed: 30, armor: 8, bounty: 14, lives: 2, radius: 12, color: '#8d9db6', wcost: 16, minWave: 14 },
   splitter:    { icon: '🫧', name: 'Splitter', hp: 55, speed: 55, bounty: 10, lives: 2, radius: 11, color: '#e0c95c', wcost: 12, minWave: 16, spawnOnDeath: { type: 'swarmling', count: 3 } },
-  juggernaut:  { icon: '🤖', name: 'Juggernaut', hp: 1600, speed: 22, armor: 10, bounty: 150, lives: 10, radius: 18, color: '#ff5577', boss: true, wcost: 0, minWave: 99 },
+  juggernaut:  { icon: '🤖', name: 'Juggernaut', hp: 1600, speed: 22, armor: 10, bounty: 150, lives: 3, radius: 18, color: '#ff5577', boss: true, wcost: 0, minWave: 99 },
   healer:      { icon: '🧙', name: 'Goblin Healer', hp: 70, speed: 52, bounty: 16, lives: 1, radius: 10, color: '#7ec86f', wcost: 18, minWave: 9,
     healAura: { r: 75, pct: 0.12, cd: 3 } },
-  wyvern:      { icon: '🐉', name: 'Wyvern', hp: 1000, speed: 36, flying: true, bounty: 150, lives: 10, radius: 16, color: '#66e0ff', boss: true, wcost: 0, minWave: 99 },
+  wyvern:      { icon: '🐉', name: 'Wyvern', hp: 1000, speed: 36, flying: true, bounty: 150, lives: 3, radius: 16, color: '#66e0ff', boss: true, wcost: 0, minWave: 99 },
 };
 
 // Path maps: waypoint lists in cell coords (off-grid endpoints = edge spawn/exit).
@@ -433,9 +433,10 @@ const DIFFICULTIES = [
 
 // spellImg points at www/assets/ui/spell_<x>.png art
 const ABILITIES = [
-  { id: 'airstrike', spellImg: 'spell_meteor', name: 'Airstrike', icon: '💥', cd: 45, desc: 'Click a location: 3 explosions, 120 dmg each' },
+  { id: 'airstrike', spellImg: 'spell_meteor', name: 'Airstrike', icon: '💥', cd: 45, desc: 'Click a location: meteor lands 2s later, 200 dmg' },
   { id: 'frostnova', spellImg: 'spell_frostnova', name: 'Frost Nova', icon: '❄️', cd: 60, desc: 'Slow every enemy 60% for 5s' },
   { id: 'overclock', spellImg: 'spell_lightning', name: 'Overclock', icon: '⚙️', cd: 60, desc: 'All towers fire 2x faster for 8s' },
+  { id: 'reinforce', name: 'Reinforcements', icon: '🛡️', cd: 45, desc: 'Click a spot: 2 militia hold it for 20s' },
 ];
 
 // Permanent meta perks bought with Research Points.

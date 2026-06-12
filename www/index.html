@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#0c1118">
 <meta name="mobile-web-app-capable" content="yes">
 <title>Bastion TD</title>
-<link rel="stylesheet" href="style.css?v=20">
+<link rel="stylesheet" href="style.css?v=21">
 </head>
 <body>
 <canvas id="menu-bg"></canvas>
@@ -126,11 +126,11 @@
       <h3>Basics</h3>
       <p>Enemies march from the spawn to the exit. Each leak costs lives. Build towers on open tiles, earn cash from kills, and survive every wave.</p>
       <h3>Towers</h3>
-      <p>Every tower has <b>two upgrade paths</b> with three tiers each, and you can invest in both. Click a tower to upgrade, sell, or change its targeting priority (First / Last / Strong / Close).</p>
+      <p>Every tower has <b>two upgrade paths</b> with three tiers each, and you can invest in both. Click a tower to upgrade, sell, or change its targeting priority (First / Last / Strong / Weak / Air / Close).</p>
       <h3>Enemy traits</h3>
       <p><b>Flying</b> enemies are ignored by Cannons. <b>Stealth</b> enemies can only be targeted near a Beacon or by a Recon Sniper. <b>Armor</b> reduces every hit, so use Venom (ignores armor) or armor-piercing upgrades. Bosses arrive every 10th wave.</p>
       <h3>Heroes</h3>
-      <p>Pick one of five heroes on the map-select screen. Your hero fights on the battlefield: click them to select (<kbd>H</kbd>), then click anywhere to move them. Heroes <b>block enemies</b> on contact, level up from kills made near them, and auto-cast a signature ability. If they fall, they respawn after 12 seconds.</p>
+      <p>Pick one of five heroes on the map-select screen. Your hero fights on the battlefield: click them to select (<kbd>H</kbd>), then click anywhere to move them. Heroes <b>block enemies</b> on contact and level up from kills made near them. Heroes cast their signature ability manually: click the ability button next to the selected hero (or the Cast button in the side panel). If they fall, they respawn after 12 seconds.</p>
       <h3>Synergies, boons &amp; combos</h3>
       <p>Towers on <b>adjacent tiles</b> can link into one of 12 discoverable <b>synergies</b> (a gold ring hints when a placement would link). Every 5th wave offers a <b>boon draft</b>: pick 1 of 3 run-long bonuses. Chained kills build a <b>combo</b> that pays bonus cash, towers earn <b>veteran ranks</b> from their own kills, and any combat tower can be <b>overcharged</b> ($60) to fire twice as fast for 6 seconds. Watch for golden <b>elite</b> enemies (triple bounty) and purple <b>omen waves</b> (+50% HP, double cash).</p>
       <h3>Iron Challenges</h3>
@@ -140,7 +140,7 @@
       <h3>Maze mode</h3>
       <p>The field is open. Your towers physically block the path, so build long corridors to maximize damage. You cannot fully wall off the exit.</p>
       <h3>Abilities</h3>
-      <p>Three commander abilities on cooldown: <b>Airstrike</b> (click target), <b>Frost Nova</b> (global slow) and <b>Overclock</b> (all towers fire 2x faster).</p>
+      <p>Four commander abilities on cooldown: <b>Airstrike</b> (click target — the meteor lands 2s later), <b>Frost Nova</b> (global slow), <b>Overclock</b> (all towers fire 2x faster) and <b>Reinforcements</b> (click a spot — 2 militia hold it for 20s).</p>
       <h3>Hotkeys</h3>
       <p><kbd>1</kbd>–<kbd>9</kbd> pick tower · <kbd>Space</kbd> pause · <kbd>F</kbd> game speed · <kbd>N</kbd> send next wave · <kbd>U</kbd>/<kbd>I</kbd> upgrade selected · <kbd>T</kbd> targeting · <kbd>O</kbd> overcharge selected · <kbd>S</kbd> sell · <kbd>Esc</kbd> deselect</p>
       <h3>Research</h3>
@@ -182,8 +182,8 @@
 <div id="tt" class="hidden"></div>
 <div id="toasts"></div>
 
-<script src="js/data.js?v=20"></script>
-<script src="js/engine.js?v=20"></script>
-<script src="js/main.js?v=20"></script>
+<script src="js/data.js?v=21"></script>
+<script src="js/engine.js?v=21"></script>
+<script src="js/main.js?v=21"></script>
 </body>
 </html>

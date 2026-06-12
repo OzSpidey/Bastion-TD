@@ -152,7 +152,7 @@ const Music = {
   },
 };
 
-const TARGET_MODES = ['First', 'Last', 'Strong', 'Close'];
+const TARGET_MODES = ['First', 'Last', 'Strong', 'Weak', 'Air', 'Close'];
 
 // Max-rank towers earn a name. Stats become attachment.
 const VET_NAMES = ['Old Marta', 'Ironjaw', 'The Whisper', 'Big Bess', 'Grudgekeeper', 'Stormcaller',
@@ -163,7 +163,7 @@ const VET_NAMES = ['Old Marta', 'Ironjaw', 'The Whisper', 'Big Bess', 'Grudgekee
 // Drop transparent PNGs at www/assets/towers/<id>.png (top-down, facing right)
 // or www/assets/enemies/<id>.png and they replace the built-in vector art.
 const Sprites = {
-  towers: {}, enemies: {}, heroes: {}, maps: {},
+  towers: {}, enemies: {}, heroes: {}, maps: {}, ui: {},
   load() {
     const tryLoad = (store, key, url) => {
       const img = new Image();
@@ -174,7 +174,11 @@ const Sprites = {
     for (const id in TOWERS) tryLoad(this.towers, id, 'assets/towers/' + id + '.png' + V);
     tryLoad(this.towers, 'militia', 'assets/towers/militia.png' + V);
     for (const id in ENEMIES) tryLoad(this.enemies, id, 'assets/enemies/' + id + '.png' + V);
-    for (const id in HEROES) tryLoad(this.heroes, id, 'assets/heroes/' + id + '.png' + V);
+    for (const id in HEROES) {
+      tryLoad(this.heroes, id, 'assets/heroes/' + id + '.png' + V);
+      const ab = HEROES[id].ability;
+      if (ab.img && !this.ui[ab.img]) tryLoad(this.ui, ab.img, 'assets/ui/' + ab.img + '.png' + V);
+    }
     // hand-painted full-battlefield terrain (optional, per map)
     for (const m of MAPS) tryLoad(this.maps, m.id, 'assets/maps/' + m.id + '.jpg');
   },
@@ -1221,9 +1225,16 @@ class Hero {
       if (target) { this.attack(target); this.cooldown = this.def.rate; }
     }
 
-    // auto-cast ability
+    // ability recharges; casting is manual (icon button / panel button)
     if (this.abilityCd > 0) this.abilityCd -= dt;
-    if (this.abilityCd <= 0 && this.castAbility()) this.abilityCd = this.def.ability.cd;
+  }
+
+  // on-canvas ability button position (clamped on-screen)
+  abilityIconPos() {
+    return {
+      x: clamp(this.x + 26, 18, COLS * CELL - 18),
+      y: clamp(this.y - 26, 18, ROWS * CELL - 18),
+    };
   }
 
   pickTarget() {
@@ -1521,6 +1532,54 @@ class Hero {
     ctx.font = 'bold 7px "Segoe UI", sans-serif';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(this.lvl, x - 15, y - 17.6);
+
+    // manual-cast ability button (only while the hero is selected)
+    if (g.selectedHero) {
+      const ip = this.abilityIconPos();
+      const ready = this.abilityCd <= 0;
+      ctx.beginPath(); ctx.arc(ip.x, ip.y, 15, 0, Math.PI * 2);
+      ctx.fillStyle = ready ? 'rgba(15,23,42,0.92)' : 'rgba(40,46,58,0.85)';
+      ctx.fill();
+      // icon: painted spell art if available, else a glyph
+      const img = this.def.ability.img ? Sprites.ui[this.def.ability.img] : null;
+      ctx.save();
+      ctx.beginPath(); ctx.arc(ip.x, ip.y, 13, 0, Math.PI * 2); ctx.clip();
+      ctx.globalAlpha = ready ? 1 : 0.45;
+      if (img) {
+        ctx.drawImage(img, ip.x - 13, ip.y - 13, 26, 26);
+      } else {
+        ctx.font = '14px serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillStyle = ready ? '#fde68a' : '#94a3b8';
+        ctx.fillText('⚡', ip.x, ip.y + 0.5);
+      }
+      ctx.restore();
+      if (ready) {
+        // gently pulsing gold ring
+        const p = 0.55 + 0.45 * Math.sin(time * 4);
+        ctx.strokeStyle = 'rgba(251,191,36,' + p.toFixed(2) + ')';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.arc(ip.x, ip.y, 15, 0, Math.PI * 2); ctx.stroke();
+        ctx.lineWidth = 1;
+      } else {
+        // grey rim + arc sweep for the remaining fraction + countdown
+        ctx.strokeStyle = 'rgba(148,163,184,0.45)';
+        ctx.beginPath(); ctx.arc(ip.x, ip.y, 15, 0, Math.PI * 2); ctx.stroke();
+        const frac = clamp(this.abilityCd / this.def.ability.cd, 0, 1);
+        ctx.strokeStyle = '#e2e8f0';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.arc(ip.x, ip.y, 15, -Math.PI / 2, -Math.PI / 2 + (1 - frac) * Math.PI * 2); ctx.stroke();
+        ctx.lineWidth = 1;
+        ctx.font = 'bold 11px "Segoe UI", sans-serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.strokeStyle = 'rgba(0,0,0,0.8)'; ctx.lineWidth = 3;
+        const cds = String(Math.ceil(this.abilityCd));
+        ctx.strokeText(cds, ip.x, ip.y);
+        ctx.lineWidth = 1;
+        ctx.fillStyle = '#fde68a';
+        ctx.fillText(cds, ip.x, ip.y);
+      }
+    }
   }
 
   // procedural placeholder until hero art lands in assets/heroes/
@@ -1629,6 +1688,7 @@ class Militia {
   update(dt) {
     const g = this.game, s = this.tower.stats;
     if (!this.alive) {
+      if (this.temp) return; // temporary reinforcements never respawn
       this.respawnT -= dt;
       if (this.respawnT <= 0) {
         this.alive = true;
@@ -1701,6 +1761,9 @@ class Militia {
 
   draw(ctx, time) {
     if (!this.alive) return;
+    // temporary reinforcements fade out over their final 2 seconds
+    const tempA = this.temp ? clamp(this.lifeT / 2, 0, 1) : 1;
+    if (tempA < 1) ctx.globalAlpha = tempA;
     const bob = this.walking ? Math.sin(time * 14 + this.slot * 2.1) * 1.2 : 0;
     const x = this.x, y = this.y + bob;
     // shadow
@@ -1763,6 +1826,7 @@ class Militia {
       ctx.fillStyle = frac > 0.5 ? '#4ade80' : frac > 0.25 ? '#fbbf24' : '#f87171';
       ctx.fillRect(this.x - 7, this.y - 16, 14 * frac, 3);
     }
+    if (tempA < 1) ctx.globalAlpha = 1;
   }
 }
 
@@ -1776,6 +1840,7 @@ class Enemy {
     if (game.omenWave && opts.hpMul == null) hpMul *= 1.5;
     this.elite = !!opts.elite;
     this.relic = !!opts.relic;
+    this.noLifeCost = !!opts.child; // splitter children leak for free
     if (this.elite) hpMul *= 2.2;
     this.maxHp = Math.round(this.def.hp * hpMul);
     this.hp = this.maxHp;
@@ -2030,7 +2095,7 @@ class Enemy {
       const sd = this.def.spawnOnDeath;
       for (let i = 0; i < sd.count; i++) {
         const child = new Enemy(g, sd.type, {
-          pathIndex: this.pathIndex, hpMul: this.hpMul,
+          pathIndex: this.pathIndex, hpMul: this.hpMul, child: true,
           d: !g.isMaze ? Math.max(0, this.d - 8 - i * 10) : undefined,
           x: g.isMaze ? this.x + (Math.random() - 0.5) * 18 : undefined,
           y: g.isMaze ? this.y + (Math.random() - 0.5) * 18 : undefined,
@@ -2159,6 +2224,8 @@ class Tower {
       if (mode === 'First') return b.progress - a.progress;
       if (mode === 'Last') return a.progress - b.progress;
       if (mode === 'Strong') return b.hp - a.hp;
+      if (mode === 'Weak') return a.hp - b.hp;
+      if (mode === 'Air') return ((b.def.flying ? 1 : 0) - (a.def.flying ? 1 : 0)) || (b.progress - a.progress);
       return dist2(this.x, this.y, a.x, a.y) - dist2(this.x, this.y, b.x, b.y);
     });
     return cands.slice(0, n);
@@ -2432,6 +2499,9 @@ class Game {
     this.particles = [];
     this.groundFx = [];
     this.spawnQueue = [];
+    this.tempMilitia = []; // Reinforcements spell units
+    this.pendingActions = []; // delayed effects [{t, fn}], e.g. airstrike impact
+    this.rallyPreview = null; // rally-flag drag ghost {x, y}
     this.over = false; this.won = false;
     this.paused = false;
     this.time = 0;
@@ -2676,6 +2746,7 @@ class Game {
       if (!t.militia) continue;
       for (const m of t.militia) if (m.alive) out.push(m);
     }
+    for (const m of this.tempMilitia) if (m.alive) out.push(m);
     return out;
   }
 
@@ -2728,6 +2799,10 @@ class Game {
   }
 
   sell(t) {
+    if (this.waveActive && this.waveTime < 3) {
+      this.addFx({ type: 'text', x: t.x, y: t.y - 18, t: 0, dur: 1.0, str: 'Hold! Wave just started', color: '#f87171' });
+      return;
+    }
     const refund = Math.floor(t.spent * this.bonuses.sellRate);
     this.cash += refund;
     this.towers = this.towers.filter(x => x !== t);
@@ -2863,6 +2938,12 @@ class Game {
     this.pendingWave = { wave: this.wave + 1, entries: this.genWave(this.wave + 1) };
     this.waveActive = true;
     this.waveTime = 0;
+    // boss intro cinematic: hold the spawn clock at -3s and play the reveal
+    const bossEntry = this.spawnQueue.find(s => ENEMIES[s.type].boss);
+    if (bossEntry) {
+      this.waveTime = -3;
+      this.addFx({ type: 'bossintro', t: 0, dur: 3, bossType: bossEntry.type });
+    }
     const isBoss = this.mode === 'bossrush' || this.wave % 10 === 0;
     const label = this.omenWave ? '\ud83c\udf11 OMEN WAVE ' + this.wave : (isBoss ? '\u2620 BOSS ' : '') + 'WAVE ' + this.wave;
     this.addFx({ type: 'banner', t: 0, dur: 1.8, str: label, color: this.omenWave ? '#c084fc' : isBoss ? '#ff5577' : '#e2e8f0' });
@@ -2874,9 +2955,15 @@ class Game {
   }
 
   leak(enemy) {
-    this.lives -= enemy.def.lives;
+    const cost = enemy.noLifeCost ? 0 : enemy.def.lives;
+    this.lives -= cost;
     this.stats.leaks++;
-    this.addShake(2.5);
+    if (cost > 0) {
+      this.emit('onLeak');
+      this.addShake(2.5);
+      this.addFx({ type: 'flash', t: 0, dur: 0.25 });
+      Sound.play('leak');
+    }
     if (!this.lastStandUsed && this.lives > 0 && this.lives <= 3) {
       this.lastStandUsed = true;
       this.addFx({ type: 'banner', t: 0, dur: 2.2, str: '\u2694 LAST STAND \u2694', color: '#f87171' });
@@ -2886,8 +2973,6 @@ class Game {
       this.addShake(5);
       Sound.play('wave');
     }
-    this.addFx({ type: 'flash', t: 0, dur: 0.25 });
-    Sound.play('leak');
     if (this.lives <= 0 && !this.over) { this.lives = 0; this.end(false); }
   }
 
@@ -2905,6 +2990,10 @@ class Game {
     const cd = def.cd * this.bonuses.cdMul;
     if (id === 'airstrike') {
       this.armedAbility = this.armedAbility === 'airstrike' ? null : 'airstrike';
+      return;
+    }
+    if (id === 'reinforce') {
+      this.armedAbility = this.armedAbility === 'reinforce' ? null : 'reinforce';
       return;
     }
     if (id === 'frostnova') {
@@ -2926,21 +3015,49 @@ class Game {
     const def = ABILITIES.find(a => a.id === 'airstrike');
     this.cds.airstrike = def.cd * this.bonuses.cdMul;
     this.armedAbility = null;
-    this.addShake(4);
-    for (let i = 0; i < 3; i++) {
-      const ox = x + (Math.random() - 0.5) * 70, oy = y + (Math.random() - 0.5) * 70;
-      this.damageArea(ox, oy, 60, 120);
-      this.addFx({ type: 'boom', x: ox, y: oy, t: -i * 0.12, dur: 0.4, r: 60, color: '#fdba74' });
-      this.addFx({ type: 'glowfx', x: ox, y: oy, r: 55, rgb: '255,200,110', t: -i * 0.12, dur: 0.35 });
-      this.addGround({ type: 'scorch', x: ox, y: oy, r: 45, t: 0, dur: 5 });
-      this.sparkBurst(ox, oy, 8, '#fdba74', 220);
+    Sound.play('wave');
+    // ground warning: enemies (and the player) get 2s before the meteor lands
+    this.addFx({ type: 'warnShadow', x, y, t: 0, dur: 2.0 });
+    this.pendingActions.push({ t: 2.0, fn: () => {
+      this.damageArea(x, y, 90, 200);
+      this.addShake(5);
+      this.addFx({ type: 'boom', x, y, t: 0, dur: 0.5, r: 90, color: '#fdba74' });
+      this.addFx({ type: 'glowfx', x, y, r: 95, rgb: '255,180,70', t: 0, dur: 0.45 });
+      this.addGround({ type: 'scorch', x, y, r: 70, t: 0, dur: 6 });
+      this.sparkBurst(x, y, 16, '#fdba74', 260);
+      Sound.play('boom');
+    } });
+  }
+
+  castReinforce(x, y) {
+    const def = ABILITIES.find(a => a.id === 'reinforce');
+    this.cds.reinforce = def.cd * this.bonuses.cdMul;
+    this.armedAbility = null;
+    for (const off of [-14, 14]) {
+      // stub "tower" carrying the stats/rally the Militia class reads
+      const stub = {
+        game: this,
+        x: clamp(x + off, 12, COLS * CELL - 12),
+        y: clamp(y, 12, ROWS * CELL - 12),
+        stats: { mHp: 50, mDmg: 6, mRate: 1.0, mArmor: 0, mRegen: 0, mRespawn: 999 },
+        rally: { x: clamp(x + off, 12, COLS * CELL - 12), y: clamp(y, 12, ROWS * CELL - 12) },
+        militia: [],
+      };
+      const m = new Militia(stub, 0);
+      stub.militia.push(m);
+      m.temp = true;
+      m.lifeT = 20;
+      this.tempMilitia.push(m);
+      this.addFx({ type: 'ring', x: m.x, y: m.y, t: 0, dur: 0.4, r: 18, color: '#cbd5e1' });
     }
-    Sound.play('boom');
+    this.addFx({ type: 'text', x, y: y - 22, t: 0, dur: 1.0, str: '🛡 REINFORCEMENTS', color: '#cbd5e1' });
+    Sound.play('build');
   }
 
   handleClick(px, py) {
     if (this.over) return;
     if (this.armedAbility === 'airstrike') { this.castAirstrike(px, py); return; }
+    if (this.armedAbility === 'reinforce') { this.castReinforce(px, py); return; }
     // environmental hazard nodes: tap to erupt
     for (const hz of this.hazards) {
       if (dist2(px, py, hz.x, hz.y) > 17 * 17) continue;
@@ -2969,6 +3086,17 @@ class Game {
         return;
       }
       if (this.selectedHero) {
+        // ability button next to the hero: cast instead of moving
+        if (h.alive) {
+          const ip = h.abilityIconPos();
+          if (dist2(px, py, ip.x, ip.y) < 17 * 17) {
+            if (h.abilityCd <= 0) {
+              if (h.castAbility()) h.abilityCd = h.def.ability.cd;
+              else this.addFx({ type: 'text', x: h.x, y: h.y - 30, t: 0, dur: 0.8, str: 'No targets!', color: '#f87171' });
+            }
+            return;
+          }
+        }
         const tc = Math.floor(px / CELL), tr = Math.floor(py / CELL);
         const tw = this.towerGrid.get(cellKey(tc, tr));
         if (tw) { this.selected = tw; this.selectedHero = false; return; }
@@ -3056,6 +3184,20 @@ class Game {
     if (this.overclockT > 0) this.overclockT -= dt;
     if (this.shakeT > 0) { this.shakeT -= dt; if (this.shakeT <= 0) this.shakeMag = 0; }
     for (const hz of this.hazards) if (hz.cd > 0) hz.cd -= dt;
+
+    // delayed effects (airstrike impact, ...)
+    for (const s of this.pendingActions) {
+      s.t -= dt;
+      if (s.t <= 0) s.fn();
+    }
+    this.pendingActions = this.pendingActions.filter(s => s.t > 0);
+
+    // temporary reinforcement militia: tick lifetime, drop the dead/expired
+    for (const m of this.tempMilitia) {
+      m.lifeT -= dt;
+      if (m.alive && m.lifeT > 0) m.update(dt);
+    }
+    this.tempMilitia = this.tempMilitia.filter(m => m.alive && m.lifeT > 0);
 
     if (!this.waveActive && this.autoTimer > 0) {
       this.autoTimer -= dt;
@@ -3535,6 +3677,31 @@ class Game {
         ctx.strokeStyle = 'rgba(56,189,248,0.5)';
         ctx.stroke();
       }
+      // barracks: rally drag preview (dashed range ring + flag ghost)
+      if (t.def.kind === 'barracks' && this.rallyPreview) {
+        ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+        ctx.setLineDash([6, 5]);
+        ctx.beginPath(); ctx.arc(t.x, t.y, t.effRange, 0, Math.PI * 2); ctx.stroke();
+        ctx.setLineDash([]);
+        // ghost flag, clamped within range
+        let gx = this.rallyPreview.x, gy = this.rallyPreview.y;
+        const gd = dist(gx, gy, t.x, t.y);
+        if (gd > t.effRange) {
+          gx = t.x + (gx - t.x) * t.effRange / gd;
+          gy = t.y + (gy - t.y) * t.effRange / gd;
+        }
+        ctx.globalAlpha = 0.65;
+        ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(gx, gy + 4); ctx.lineTo(gx, gy - 14); ctx.stroke();
+        ctx.lineWidth = 1;
+        ctx.fillStyle = '#f8fafc';
+        ctx.beginPath();
+        ctx.moveTo(gx, gy - 14);
+        ctx.lineTo(gx + 11, gy - 11);
+        ctx.lineTo(gx, gy - 7);
+        ctx.closePath(); ctx.fill();
+        ctx.globalAlpha = 1;
+      }
       // barracks: rally flag marker
       if (t.def.kind === 'barracks') {
         const r = t.rally;
@@ -3606,6 +3773,7 @@ class Game {
       if (!t.militia) continue;
       for (const m of t.militia) m.draw(ctx, this.time);
     }
+    for (const m of this.tempMilitia) m.draw(ctx, this.time);
 
     // enemies
     for (const e of this.enemies) drawEnemy(ctx, e, this.time);
@@ -3860,6 +4028,48 @@ class Game {
       } else if (f.type === 'flash') {
         ctx.fillStyle = 'rgba(248,113,113,' + (0.25 * (1 - k)) + ')';
         ctx.fillRect(0, 0, W, H);
+      } else if (f.type === 'warnShadow') {
+        // incoming-meteor warning: expanding dark ellipse + pulsing red ring
+        const wr = 18 + 72 * k;
+        ctx.globalAlpha = 0.25 + 0.3 * k;
+        ctx.fillStyle = '#0a0805';
+        ctx.beginPath(); ctx.ellipse(f.x, f.y, wr, wr * 0.78, 0, 0, Math.PI * 2); ctx.fill();
+        const wp = 0.45 + 0.55 * Math.abs(Math.sin(this.time * 9));
+        ctx.globalAlpha = wp;
+        ctx.strokeStyle = '#f87171';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.ellipse(f.x, f.y, 90, 90 * 0.78, 0, 0, Math.PI * 2); ctx.stroke();
+        ctx.lineWidth = 1;
+        ctx.globalAlpha = 1;
+        ctx.font = 'bold 12px "Segoe UI", sans-serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillStyle = 'rgba(248,113,113,' + wp.toFixed(2) + ')';
+        ctx.fillText('☄ ' + Math.ceil(f.dur - f.t), f.x, f.y - 90 * 0.78 - 12);
+      } else if (f.type === 'bossintro') {
+        // boss reveal: darken the field, big sprite + title card
+        const inK = clamp(f.t / 0.4, 0, 1);
+        const outK = clamp((f.dur - f.t) / 0.5, 0, 1);
+        const a = Math.min(inK, outK);
+        if (f.t > 0.4 && !f.shook) { f.shook = true; this.addShake(4); }
+        ctx.fillStyle = 'rgba(0,0,0,' + (0.55 * a).toFixed(2) + ')';
+        ctx.fillRect(0, 0, W, H);
+        const cy = H * 0.46;
+        ctx.globalAlpha = a;
+        const bspr = Sprites.enemies[f.bossType];
+        if (bspr) ctx.drawImage(bspr, W / 2 - 70, cy - 178, 140, 140);
+        ctx.font = 'bold 38px Georgia, "Times New Roman", serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        const bstr = f.bossType === 'juggernaut' ? 'The Juggernaut comes.' : 'The Wyvern descends.';
+        ctx.strokeStyle = 'rgba(0,0,0,0.8)'; ctx.lineWidth = 5;
+        ctx.strokeText(bstr, W / 2, cy);
+        ctx.lineWidth = 1;
+        ctx.fillStyle = '#fbbf24';
+        ctx.fillText(bstr, W / 2, cy);
+        if (this.totalWaves === this.wave) {
+          ctx.font = 'bold 17px "Segoe UI", sans-serif';
+          ctx.fillStyle = '#f87171';
+          ctx.fillText('FINAL ASSAULT', W / 2, cy + 38);
+        }
       }
       ctx.globalAlpha = 1;
     }
@@ -3882,6 +4092,20 @@ class Game {
       ctx.font = '12px "Segoe UI", sans-serif';
       ctx.fillStyle = '#fbbf24';
       ctx.fillText('AIRSTRIKE — click target', this.mouse.x, this.mouse.y - 75);
+    }
+
+    // reinforcements reticle
+    if (this.armedAbility === 'reinforce') {
+      ctx.beginPath();
+      ctx.arc(this.mouse.x, this.mouse.y, 26, 0, Math.PI * 2);
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.setLineDash([6, 6]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.font = '12px "Segoe UI", sans-serif';
+      ctx.fillStyle = '#cbd5e1';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('REINFORCEMENTS — click position', this.mouse.x, this.mouse.y - 36);
     }
     ctx.restore();
   }
