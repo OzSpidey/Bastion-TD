@@ -744,7 +744,9 @@ function buildAbilityBar() {
     const b = document.createElement('button');
     b.className = 'ability-btn';
     b.title = `${a.name} [${'QWE'[i]}] — ${a.desc}`;
-    b.innerHTML = `<span class="a-icon">${a.icon}</span><span class="a-name">${a.name}</span><div class="cd-fill"></div>`;
+    b.innerHTML = `${a.spellImg
+      ? `<img class="a-img" src="assets/ui/${a.spellImg}.png?v=2" onerror="this.outerHTML='<span class=a-icon>${a.icon}</span>'">`
+      : `<span class="a-icon">${a.icon}</span>`}<span class="a-name">${a.name}</span><div class="cd-fill"></div>`;
     b.addEventListener('click', () => game && game.useAbility(a.id));
     bar.appendChild(b);
     abilityBtns.push({ id: a.id, el: b, fill: b.querySelector('.cd-fill'), def: a });
@@ -804,7 +806,7 @@ function refreshInfoPanel() {
           ? `HP ${Math.ceil(hero.hp)}/${hero.maxHp} · Damage ${Math.round(hero.dmg)} · ${h.blocks > 1 ? 'Blocks ' + h.blocks : 'Blocks 1'}`
           : `☠ Respawns in ${Math.ceil(hero.respawnT)}s`}</p>
         <p class="tstats">XP ${Math.floor(hero.xp)}/${hero.xpNeed}</p>
-        <p class="tstats">⚡ <b>${h.ability.name}</b> (auto): ${h.ability.desc}</p>
+        <p class="tstats">${h.ability.img ? `<img class="ab-ico" src="assets/ui/${h.ability.img}.png?v=2">` : '⚡'} <b>${h.ability.name}</b> (auto): ${h.ability.desc}</p>
         <p class="hint">Click anywhere on the battlefield to move ${h.name.split(' ')[0]}. Right-click to deselect.</p>`;
       return;
     }
@@ -885,9 +887,13 @@ function refreshInfoPanel() {
   });
   const ocBtn = panel.querySelector('#btn-overcharge');
   if (ocBtn && sel) {
-    if (sel.overchargeT > 0) { ocBtn.textContent = '⚡ ' + Math.ceil(sel.overchargeT) + 's'; ocBtn.disabled = true; ocBtn.classList.add('active'); }
-    else if (sel.ocCd > 0) { ocBtn.textContent = '⚡ ' + Math.ceil(sel.ocCd) + 's'; ocBtn.disabled = true; ocBtn.classList.remove('active'); }
-    else { ocBtn.textContent = '⚡ Overcharge $60'; ocBtn.disabled = game.cash < 60; ocBtn.classList.remove('active'); }
+    let txt, dis, act = false;
+    if (sel.overchargeT > 0) { txt = '⚡ ' + Math.ceil(sel.overchargeT) + 's'; dis = true; act = true; }
+    else if (sel.ocCd > 0) { txt = '⚡ ' + Math.ceil(sel.ocCd) + 's'; dis = true; }
+    else { txt = '⚡ Overcharge $60'; dis = game.cash < 60; }
+    if (ocBtn.textContent !== txt) ocBtn.textContent = txt;
+    if (ocBtn.disabled !== dis) ocBtn.disabled = dis;
+    ocBtn.classList.toggle('active', act);
   }
 }
 
@@ -960,7 +966,7 @@ function refreshTutorial() {
   if (tutStep < 0) tutStep = 0;
   const step = TUT_STEPS[tutStep];
   if (step.done(game)) { tutStep++; return; }
-  bar.innerHTML = step.text;
+  if (bar.innerHTML !== step.text) bar.innerHTML = step.text;
   bar.classList.remove('hidden');
 }
 

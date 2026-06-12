@@ -184,14 +184,14 @@ const HEROES = {
     desc: 'Fire mage. Every bolt explodes in a small blast and sets enemies burning.',
     hp: 165, dmg: 14, rate: 1.0, range: 135, speed: 70, blocks: 1, armorPct: 0, regen: 0.035,
     splash: 22, burnDps: 5, burnDur: 2,
-    ability: { name: 'Meteor Call', cd: 18, desc: 'Calls a meteor onto the biggest cluster: huge blast + burn.' },
+    ability: { name: 'Meteor Call', img: 'spell_meteor', cd: 18, desc: 'Calls a meteor onto the biggest cluster: huge blast + burn.' },
   },
   mercy: {
     name: 'Sister Mercy', title: 'War Cleric', icon: '✨', color: '#fde68a',
     desc: 'Holy fighter. Nearby towers attack 10% faster; regenerates quickly.',
     hp: 230, dmg: 13, rate: 0.8, range: 34, speed: 72, blocks: 1, armorPct: 0.25, regen: 0.05,
     auraRate: 0.10, auraR: 95,
-    ability: { name: 'Holy Nova', cd: 16, desc: 'Heals herself 30% and blasts + slows every enemy around her.' },
+    ability: { name: 'Holy Nova', img: 'spell_healrain', cd: 16, desc: 'Heals herself 30% and blasts + slows every enemy around her.' },
   },
   korg: {
     name: 'Korg Ironhide', title: 'Demolitionist', icon: '💣', color: '#f87171',
@@ -217,7 +217,7 @@ const HEROES = {
     desc: 'Druid marksman. Thorn shots mark targets to take +10% damage from all sources.',
     hp: 190, dmg: 15, rate: 0.8, range: 140, speed: 75, blocks: 1, armorPct: 0.1, regen: 0.04,
     markOnHit: { pct: 0.10, dur: 2 },
-    ability: { name: 'Root Bind', cd: 16, desc: 'Roots up to 6 nearby enemies in place for 2.5s and poisons them.' },
+    ability: { name: 'Root Bind', img: 'spell_rootbind', cd: 16, desc: 'Roots up to 6 nearby enemies in place for 2.5s and poisons them.' },
   },
 };
 const HERO_ORDER = ['aldric', 'lyra', 'magnus', 'mercy', 'korg', 'valora', 'grimlock', 'dorin'];
@@ -372,10 +372,11 @@ const DIFFICULTIES = [
   { id: 'hard', name: 'Hard', waves: 40, lives: 15, cash: 180, hpMul: 1.2, rp: 35 },
 ];
 
+// spellImg points at www/assets/ui/spell_<x>.png art
 const ABILITIES = [
-  { id: 'airstrike', name: 'Airstrike', icon: '💥', cd: 45, desc: 'Click a location: 3 explosions, 120 dmg each' },
-  { id: 'frostnova', name: 'Frost Nova', icon: '❄️', cd: 60, desc: 'Slow every enemy 60% for 5s' },
-  { id: 'overclock', name: 'Overclock', icon: '⚙️', cd: 60, desc: 'All towers fire 2x faster for 8s' },
+  { id: 'airstrike', spellImg: 'spell_meteor', name: 'Airstrike', icon: '💥', cd: 45, desc: 'Click a location: 3 explosions, 120 dmg each' },
+  { id: 'frostnova', spellImg: 'spell_frostnova', name: 'Frost Nova', icon: '❄️', cd: 60, desc: 'Slow every enemy 60% for 5s' },
+  { id: 'overclock', spellImg: 'spell_lightning', name: 'Overclock', icon: '⚙️', cd: 60, desc: 'All towers fire 2x faster for 8s' },
 ];
 
 // Permanent meta perks bought with Research Points.

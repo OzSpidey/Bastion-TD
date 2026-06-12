@@ -2358,7 +2358,7 @@ class Game {
 
   // ---- building ----
   towerCost(typeId) { return Math.round(TOWERS[typeId].cost * this.costMul); }
-  towerBanned(typeId) { return this.bannedTowers && this.bannedTowers.includes(typeId); }
+  towerBanned(typeId) { return !!(this.bannedTowers && this.bannedTowers.includes(typeId)); }
 
   canPlace(c, r) {
     if (c < 0 || r < 0 || c >= COLS || r >= ROWS) return false;

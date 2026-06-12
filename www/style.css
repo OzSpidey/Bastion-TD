@@ -547,3 +547,7 @@ body {
 .b-img { width: 38px; height: 38px; object-fit: contain; display: block; margin: 0 auto 2px; filter: drop-shadow(0 2px 2px rgba(0,0,0,.5)); }
 .build-btn.selected .b-img { transform: scale(1.1); }
 #tt .tt-img { float: right; width: 46px; height: 46px; object-fit: contain; margin: -2px -2px 2px 6px; }
+
+/* spell art on ability buttons + hero panel */
+.a-img { width: 34px; height: 34px; object-fit: contain; display: block; margin: 0 auto 2px; }
+.ab-ico { width: 18px; height: 18px; object-fit: contain; vertical-align: -4px; }
