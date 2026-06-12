@@ -151,11 +151,17 @@ function showMaps(mode) {
     card.className = 'map-card';
     const locked = !mapUnlocked(mode, idx);
     if (locked) card.classList.add('locked');
-    const cv = document.createElement('canvas');
-    cv.width = 240; cv.height = 240 * ROWS / COLS;
-    drawMiniMap(cv, map);
     card.innerHTML = `<h3>${map.name} <small style="color:var(--gold)">${'★'.repeat(map.diffStars)}</small></h3>`;
-    card.appendChild(cv);
+    const art = document.createElement('img');
+    art.className = 'map-art';
+    art.src = 'assets/ui/map_' + map.id + '.jpg';
+    art.onerror = () => {
+      const cv = document.createElement('canvas');
+      cv.width = 240; cv.height = 240 * ROWS / COLS;
+      drawMiniMap(cv, map);
+      art.replaceWith(cv);
+    };
+    card.appendChild(art);
     const desc = document.createElement('p');
     desc.className = 'map-best';
     desc.textContent = map.desc;
