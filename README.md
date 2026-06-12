@@ -10,6 +10,16 @@ A production tower defense game built from the best ideas in the genre. One Java
 2. **Local**: open `www/index.html` in any browser.
 3. **Android**: download the debug APK artifact from the latest "Build Android" workflow run and install it on any phone.
 
+## Screenshots
+
+| Green Meadow — towers, hero and a relic carrier | Cinder Peak — tesla arcs over molten ground |
+|---|---|
+| ![Green Meadow combat](screenshots/meadow.png) | ![Cinder Peak volcanic combat](screenshots/volcanic.png) |
+
+| Frozen Spiral — frost and snipers hold the rings | Twin Gates — maze building in the twilight |
+|---|---|
+| ![Frozen Spiral](screenshots/snow.png) | ![Twin Gates maze](screenshots/twilight.png) |
+
 ## Design pedigree
 
 | System | Inspired by |
