@@ -418,14 +418,11 @@ function drawTower(ctx, t, time) {
   const accent = TOWER_ACCENT[t.type] || '#fff';
   const spr = Sprites.towers[t.type];
   if (spr) {
+    // sprite art is a 3/4-view building: draw static, never rotate
     ctx.beginPath();
-    ctx.ellipse(t.x, t.y + 13, 15, 5, 0, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fill();
-    ctx.save();
-    ctx.translate(t.x, t.y);
-    ctx.rotate(t.angle);
-    ctx.drawImage(spr, -22, -22, 44, 44);
-    ctx.restore();
+    ctx.ellipse(t.x, t.y + 14, 16, 5.5, 0, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fill();
+    ctx.drawImage(spr, t.x - 24, t.y - 29, 48, 48);
   } else {
     towerBase(ctx, t.x, t.y, accent, t.levels[0] + t.levels[1]);
     drawTurret(ctx, t, time);
@@ -622,10 +619,11 @@ function drawEnemy(ctx, e, time) {
   ctx.fill();
   const spr = Sprites.enemies[e.type];
   if (spr) {
-    const s = r * 2.7;
+    // sprite art is 3/4-view: keep upright, just mirror when walking left
+    const s = r * 3.0;
     ctx.save();
     ctx.translate(x, y);
-    ctx.rotate(e.heading + Math.PI / 2);
+    if (Math.cos(e.heading) < -0.05) ctx.scale(-1, 1);
     ctx.drawImage(spr, -s / 2, -s / 2, s, s);
     ctx.restore();
   } else {
