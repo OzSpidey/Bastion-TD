@@ -129,6 +129,25 @@ const Music = {
     if (this.intensity > 0) {
       if (s % 8 === 4) this.noise(t, 0.05, 0.05);              // hat
       if (s % 16 === 8) this.note(70, t, 0.12, 'sine', 0.09);  // kick
+      // lead melody: pentatonic-ish line over the chord, subtle
+      if (s % 4 === 2) this.note(chord[Math.floor(s / 4) % 3] * 2, t, this.STEP * 2.5, 'square', 0.014);
+      if (s % 16 === 14) this.note(chord[0] * 4, t, this.STEP * 1.5, 'square', 0.012); // sparkle fill
+    }
+  },
+  // short event fanfares layered over (or without) the loop
+  stinger(kind) {
+    if (!this.ctx || !this.on) return;
+    if (this.ctx.state === 'suspended') this.ctx.resume();
+    const t = this.ctx.currentTime + 0.02;
+    if (kind === 'horn') {
+      this.note(196, t, 0.18, 'sawtooth', 0.06);          // G3
+      this.note(261.63, t + 0.14, 0.35, 'sawtooth', 0.06); // C4, slight overlap
+    } else if (kind === 'win') {
+      const seq = [523.25, 659.25, 783.99, 1046.5]; // C5 E5 G5 C6
+      for (let i = 0; i < seq.length; i++) this.note(seq[i], t + i * 0.12, 0.18, 'sine', 0.05);
+    } else if (kind === 'lose') {
+      this.note(220, t, 0.4, 'sawtooth', 0.06);     // A3
+      this.note(155.56, t + 0.35, 0.4, 'sawtooth', 0.06); // Eb3
     }
   },
 };
@@ -749,7 +768,8 @@ function drawEnemyBody(ctx, e, x, y, time) {
 function drawEnemy(ctx, e, time) {
   const stealthHidden = e.def.stealth && !e.revealed;
   const yOff = e.def.flying ? -8 + Math.sin(time * 5 + e.x * 0.03) * 2 : 0;
-  const x = e.x, y = e.y + yOff;
+  const bob = e.def.flying ? 0 : Math.abs(Math.sin(time * 9 + e.ph)) * 1.6; // march bob (shadow stays put)
+  const x = e.x, y = e.y + yOff - bob;
   const r = e.def.radius;
   ctx.globalAlpha = stealthHidden ? 0.4 : 1;
   ctx.beginPath();
@@ -816,12 +836,26 @@ function drawEnemy(ctx, e, time) {
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText('💫', x, y - r - 10);
   }
-  const w = e.def.boss ? 40 : 20;
-  const frac = clamp(e.hp / e.maxHp, 0, 1);
-  ctx.fillStyle = 'rgba(0,0,0,0.55)';
-  ctx.fillRect(x - w / 2, y - r - 8, w, 4);
-  ctx.fillStyle = frac > 0.5 ? '#4ade80' : frac > 0.25 ? '#fbbf24' : '#f87171';
-  ctx.fillRect(x - w / 2, y - r - 8, w * frac, 4);
+  if (e.def.boss || e.hp < e.maxHp) {
+    const w = e.def.boss ? 40 : 20;
+    const frac = clamp(e.hp / e.maxHp, 0, 1);
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(x - w / 2, y - r - 8, w, 4);
+    ctx.fillStyle = frac > 0.5 ? '#4ade80' : frac > 0.25 ? '#fbbf24' : '#f87171';
+    ctx.fillRect(x - w / 2, y - r - 8, w * frac, 4);
+    if (e.def.armor > 0) {
+      // tiny shield pip at the left end of the bar; dimmed once armor is fully shredded
+      const sx = x - w / 2 - 5, sy = y - r - 6;
+      ctx.fillStyle = e.shred >= e.def.armor ? 'rgba(148,163,184,0.35)' : '#94a3b8';
+      ctx.beginPath();
+      ctx.moveTo(sx - 2.5, sy - 2.5);
+      ctx.lineTo(sx + 2.5, sy - 2.5);
+      ctx.lineTo(sx + 2.5, sy + 0.6);
+      ctx.lineTo(sx, sy + 2.8);
+      ctx.lineTo(sx - 2.5, sy + 0.6);
+      ctx.closePath(); ctx.fill();
+    }
+  }
   ctx.globalAlpha = 1;
 }
 
@@ -1747,6 +1781,7 @@ class Enemy {
     this.revealed = false;
     this.heading = 0;
     this.hitT = 0;
+    this.ph = Math.random() * Math.PI * 2; // march-bob phase
 
     if (game.isMaze) {
       const spawn = game.map.spawns[this.pathIndex % game.map.spawns.length];
@@ -1936,7 +1971,24 @@ class Enemy {
     if (this.elite || g.omenWave) {
       g.addFx({ type: 'text', x: this.x, y: this.y - 16, t: 0, dur: 0.9, str: '+$' + reward, color: '#fbbf24' });
       if (this.elite) g.sparkBurst(this.x, this.y, 8, '#fbbf24', 160);
+    } else if (reward >= 8) {
+      g.addFx({ type: 'dmg', x: this.x, y: this.y - this.def.radius - 8, t: 0, dur: 0.6, str: '+$' + reward, gold: true });
     }
+    // coin pop: KR-style kill feedback
+    const nCoins = (this.elite || this.def.boss) ? 4 : 1;
+    for (let i = 0; i < nCoins; i++) {
+      g.addParticle({
+        kind: 'coin', x: this.x, y: this.y,
+        vx: (Math.random() - 0.5) * 60, vy: -90, grav: 260,
+        t: 0, dur: 0.6,
+      });
+    }
+    // death splat: battle grime on the road (darkened enemy color)
+    const cn = parseInt(this.def.color.slice(1), 16);
+    const srgb = ((cn >> 16) >> 1) + ',' + (((cn >> 8) & 255) >> 1) + ',' + ((cn & 255) >> 1);
+    const sblobs = [];
+    for (let i = 0; i < 3; i++) sblobs.push([(Math.random() - 0.5) * 12, (Math.random() - 0.5) * 8, 3 + Math.random() * 3]);
+    g.addGround({ type: 'splat', x: this.x, y: this.y + this.def.radius * 0.5, blobs: sblobs, rgb: srgb, t: 0, dur: 6 });
     g.cash += reward;
     g.stats.kills++;
     g.stats.cashEarned += reward;
@@ -2778,6 +2830,7 @@ class Game {
     if (this.omenWave) this.addFx({ type: 'text', x: COLS * CELL / 2, y: CELL * ROWS * 0.34 + 44, t: 0, dur: 2.2, str: 'Enemies +50% HP \u00b7 double bounty', color: '#c084fc' });
     if (isBoss) Sound.play('roar');
     Sound.play('wave');
+    Music.stinger('horn');
     this.emit('onWave', this.wave);
   }
 
@@ -2952,6 +3005,7 @@ class Game {
       stars = this.lives >= this.startLives ? 3 : this.lives >= Math.ceil(this.startLives / 2) ? 2 : 1;
     }
     Sound.play(won ? 'win' : 'lose');
+    Music.stinger(won ? 'win' : 'lose');
     this.emit('onEnd', { won, wavesCleared: cleared, rp, stars, kills: this.stats.kills, leaks: this.stats.leaks, noLeaks: this.lives >= this.startLives });
   }
 
@@ -3606,6 +3660,14 @@ class Game {
         ctx.globalAlpha = k;
         ctx.fillStyle = p.color;
         ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
+      } else if (p.kind === 'coin') {
+        ctx.globalAlpha = Math.min(1, k * 3);
+        ctx.fillStyle = '#fbbf24';
+        ctx.beginPath(); ctx.arc(p.x, p.y, 3.5, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#a16207';
+        ctx.beginPath(); ctx.arc(p.x, p.y, 3.5, 0, Math.PI * 2); ctx.stroke();
+        ctx.fillStyle = '#fef9c3';
+        ctx.beginPath(); ctx.arc(p.x - 1.2, p.y - 1.2, 1.1, 0, Math.PI * 2); ctx.fill();
       }
     }
     ctx.globalAlpha = 1;
@@ -3705,7 +3767,7 @@ class Game {
         ctx.fillText(f.str, f.x, f.y - k * 22);
       } else if (f.type === 'dmg') {
         ctx.font = (f.crit ? 'bold 14px' : 'bold 10px') + ' "Segoe UI", sans-serif';
-        ctx.fillStyle = f.crit ? '#fbbf24' : '#f8fafc';
+        ctx.fillStyle = (f.crit || f.gold) ? '#fbbf24' : '#f8fafc';
         ctx.strokeStyle = 'rgba(0,0,0,0.7)';
         ctx.lineWidth = 2.5;
         ctx.globalAlpha = 1 - k * k;
