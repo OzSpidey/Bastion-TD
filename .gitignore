@@ -7,3 +7,4 @@ dist/
 *.keystore
 *.jks
 RELEASING.md
+store-assets/
