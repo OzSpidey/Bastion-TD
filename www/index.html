@@ -9,7 +9,7 @@
 <meta name="theme-color" content="#0c1118">
 <meta name="mobile-web-app-capable" content="yes">
 <title>Bastion TD</title>
-<link rel="stylesheet" href="style.css?v=32">
+<link rel="stylesheet" href="style.css?v=33">
 </head>
 <body>
 <canvas id="menu-bg"></canvas>
@@ -17,55 +17,22 @@
 
   <!-- ============ MAIN MENU ============ -->
   <div id="screen-menu" class="screen active">
-    <div class="m2-wrap">
-      <h1 class="m2-title">BASTION <span>TD</span></h1>
-      <p class="m2-sub">Hold the line. Build the maze. Break the horde.</p>
-      <div class="m2-panel">
-        <div class="m2-grid">
-          <button class="menu-btn m2-card" data-mode="campaign">
-            <img src="assets/ui/env_rocky.jpg" alt="">
-            <span class="m2-name">Campaign</span><span class="m2-desc">7 maps · 3 difficulties</span>
-          </button>
-          <button class="menu-btn m2-card" data-mode="endless">
-            <img src="assets/ui/env_tundra.jpg" alt="">
-            <span class="m2-name">Endless</span><span class="m2-desc">Survive the horde</span>
-          </button>
-          <button class="menu-btn m2-card" data-mode="maze">
-            <img src="assets/ui/env_crystal.jpg" alt="">
-            <span class="m2-name">Maze</span><span class="m2-desc">Towers are the walls</span>
-          </button>
-          <button class="menu-btn m2-card" data-mode="bossrush">
-            <img src="assets/ui/env_swamp.jpg" alt="">
-            <span class="m2-name">Boss Rush</span><span class="m2-desc">Every wave a boss</span>
-          </button>
-          <button class="menu-btn m2-card" data-mode="daily">
-            <img src="assets/ui/env_desert.jpg" alt="">
-            <span class="m2-name">Daily Challenge</span><span class="m2-desc">Seeded · mutators</span>
-          </button>
-          <button class="menu-btn m2-card" data-mode="sandbox">
-            <img src="assets/ui/env_props.jpg" alt="">
-            <span class="m2-name">Sandbox</span><span class="m2-desc">Unlimited cash</span>
-          </button>
-        </div>
-        <div class="m2-heroes">
-          <img src="assets/heroes/aldric.png?v=2" title="Sir Aldric">
-          <img src="assets/heroes/lyra.png?v=2" title="Lyra Swiftwind">
-          <img src="assets/heroes/magnus.png?v=2" title="Magnus Pyre">
-          <img src="assets/heroes/mercy.png?v=2" title="Sister Mercy">
-          <img src="assets/heroes/korg.png?v=2" title="Korg Ironhide">
-          <img src="assets/heroes/valora.png?v=2" title="Valora">
-          <img src="assets/heroes/grimlock.png?v=2" title="Grimlock">
-          <img src="assets/heroes/dorin.png?v=2" title="Dorin">
-        </div>
-      </div>
-      <div class="m2-bottom">
-        <button class="flat-btn m2-btn" id="btn-research">🔬 Research <b id="menu-rp"></b></button>
-        <button class="flat-btn m2-btn" id="btn-achievements">🏅 Achievements <b id="menu-ach"></b></button>
-        <button class="flat-btn m2-btn" id="btn-help">❓ How to Play</button>
-        <button class="flat-btn m2-btn" id="btn-settings">⚙️ Options</button>
-      </div>
-      <div id="menu-quests"></div>
-      <p class="footnote" id="menu-stats"></p>
+    <div class="menu-stage">
+      <img class="menu-art" src="assets/ui/mainmenu.jpg?v=2" alt="Bastion TD">
+      <button class="hot menu-btn" data-mode="campaign" style="left:20%;top:24.5%;width:18.5%;height:22%" title="Campaign"></button>
+      <button class="hot menu-btn" data-mode="endless"  style="left:41%;top:24.5%;width:18%;height:22%" title="Endless"></button>
+      <button class="hot menu-btn" data-mode="maze"     style="left:60%;top:24.5%;width:19%;height:22%" title="Maze"></button>
+      <button class="hot menu-btn" data-mode="bossrush" style="left:20%;top:47.5%;width:18.5%;height:22%" title="Boss Rush"></button>
+      <button class="hot menu-btn" data-mode="daily"    style="left:41%;top:47.5%;width:18%;height:22%" title="Daily Challenge"></button>
+      <button class="hot menu-btn" data-mode="sandbox"  style="left:60%;top:47.5%;width:19%;height:22%" title="Sandbox"></button>
+      <button class="hot" id="btn-research"     style="left:14.5%;top:86%;width:17%;height:9.5%" title="Research"></button>
+      <button class="hot" id="btn-achievements" style="left:33%;top:86%;width:18%;height:9.5%" title="Achievements"></button>
+      <button class="hot" id="btn-help"         style="left:52%;top:86%;width:17%;height:9.5%" title="How to Play"></button>
+      <button class="hot" id="btn-settings"     style="left:70%;top:86%;width:17%;height:9.5%" title="Options"></button>
+      <span class="hot-num" id="menu-rp" style="left:14.5%;width:17%"></span>
+      <span class="hot-num" id="menu-ach" style="left:33%;width:18%"></span>
+      <div id="menu-quests" class="menu-quests-ov"></div>
+      <p class="footnote" id="menu-stats" style="display:none"></p>
     </div>
   </div>
 
@@ -186,8 +153,8 @@
 <div id="tt" class="hidden"></div>
 <div id="toasts"></div>
 
-<script src="js/data.js?v=32"></script>
-<script src="js/engine.js?v=32"></script>
-<script src="js/main.js?v=32"></script>
+<script src="js/data.js?v=33"></script>
+<script src="js/engine.js?v=33"></script>
+<script src="js/main.js?v=33"></script>
 </body>
 </html>
