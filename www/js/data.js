@@ -254,7 +254,7 @@ const CURSES = [
 const MAP_HAZARDS = {
   meadow: [[6, 2], [14, 4]],
   riverbend: [[4, 2], [13, 9]],
-  switchback: [[9, 4], [9, 7]],
+  switchback: [[9, 2], [8, 9]],
   crossroads: [[10, 4], [15, 6]],
   spiral: [[9, 3], [8, 8]],
   openfield: [[11, 6], [5, 6]],
@@ -417,7 +417,30 @@ const MAPS = [
     ] },
   { id: 'switchback', name: 'Switchback Canyon', type: 'path', diffStars: 2, theme: 'canyon',
     desc: 'Four hairpins. The kill zone is yours to pick.',
-    paths: [[[-1, 1], [18, 1], [18, 4], [1, 4], [1, 7], [18, 7], [18, 10], [-1, 10]]] },
+    // hand-painted battlefield (assets/maps/switchback.jpg): cave -> climb onto
+    // the top lane, then four painted hairpins (right, left, right, left)
+    // down the canyon shelves to the castle gate at the bottom right.
+    paths: [[[1, 1], [1, 2], [2, 3], [4, 3], [5, 2], [14, 2], [15, 3], [14, 4], [2, 4], [2, 5], [14, 5], [15, 6], [14, 7], [3, 7], [2, 8], [3, 9], [15, 9], [16, 10], [17, 10]]],
+    blocked: [
+      // north canyon rim
+      [0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0], [8, 0], [9, 0],
+      [10, 0], [11, 0], [12, 0], [13, 0], [14, 0], [15, 0], [16, 0], [17, 0], [18, 0], [19, 0],
+      // west canyon wall
+      [0, 1], [0, 2], [0, 3], [0, 4], [0, 5], [0, 6], [0, 7], [0, 8], [0, 9], [0, 10], [0, 11],
+      [1, 3], [1, 4], [1, 5], [1, 6], [1, 7], [1, 8], [1, 9], [1, 10],
+      // east canyon wall
+      [19, 1], [19, 2], [19, 3], [19, 4], [19, 5], [19, 6], [19, 7], [19, 8], [19, 9], [19, 10], [19, 11],
+      // cave structure and rocks around the entry climb
+      [2, 1], [2, 2], [3, 1], [3, 2], [4, 1], [4, 2], [5, 1],
+      // rocks above the right hairpin and hairpin shoulder
+      [15, 1], [16, 1], [17, 1], [18, 1], [16, 2], [16, 3], [16, 4], [15, 4], [15, 5], [16, 5], [16, 6], [15, 7], [15, 8],
+      // castle footprint and surrounding crags
+      [17, 5], [18, 5], [18, 6], [16, 7], [17, 7], [18, 7],
+      [16, 8], [17, 8], [18, 8], [16, 9], [17, 9], [18, 9], [18, 10],
+      // south canyon rim
+      [1, 11], [2, 11], [3, 11], [4, 11], [5, 11], [6, 11], [7, 11], [8, 11], [9, 11],
+      [10, 11], [11, 11], [12, 11], [13, 11], [14, 11], [15, 11], [16, 11], [17, 11], [18, 11],
+    ] },
   { id: 'crossroads', name: 'Crossroads', type: 'path', diffStars: 3, theme: 'autumn',
     desc: 'Two lanes merge into one. Split your defense.',
     paths: [
