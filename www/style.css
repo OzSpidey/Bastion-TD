@@ -829,12 +829,13 @@ body {
 .menu-splash {
   position: relative;
   width: min(100%, calc((100vh - 8px) * 1376 / 768));
-  aspect-ratio: 1376 / 768;
-  background: url('assets/ui/mainmenu.jpg?v=2') center/cover no-repeat;
   border-radius: 6px;
   box-shadow: 0 0 60px rgba(0,0,0,.6);
   overflow: hidden;
+  line-height: 0;
 }
+/* the art is a real img so % hotspots map 1:1 to image pixels (no cover crop) */
+.splash-img { display: block; width: 100%; height: auto; }
 .splash-hot {
   position: absolute;
   background: transparent !important;
