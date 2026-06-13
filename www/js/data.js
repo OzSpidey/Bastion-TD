@@ -261,7 +261,7 @@ const MAP_HAZARDS = {
   twingates: [[8, 5], [12, 6]],
   oasis: [[10, 5], [5, 5]],
   cinderpeak: [[10, 5], [8, 8]],
-  ashworks: [[10, 5], [4, 8]],
+  ashworks: [[10, 5], [8, 9]],
 };
 
 // ============ Tower synergies ============
@@ -569,8 +569,11 @@ const MAPS = [
     ] },
   { id: 'ashworks', name: 'The Ashworks', type: 'maze', diffStars: 4, theme: 'volcanic',
     desc: 'Open volcanic field. Forge a maze between the vents.',
-    spawns: [[0, 2], [0, 9]], exit: [19, 5],
-    blocked: [[7, 4], [7, 5], [7, 6], [13, 5], [13, 6], [13, 7], [4, 0], [4, 1], [16, 10], [16, 11]] },
+    // hand-painted battlefield (assets/maps/ashworks.jpg): two lava spawn gates on
+    // the left, the obsidian fortress exit on the right; lava vents, craters and
+    // rock spires are blocked, the fortress gate (row 4) stays open.
+    spawns: [[0, 2], [0, 6]], exit: [18, 4],
+    blocked: [[8, 1], [9, 1], [3, 8], [4, 8], [2, 9], [3, 9], [5, 9], [6, 9], [4, 6], [5, 6], [11, 1], [12, 1], [13, 1], [14, 4], [15, 4], [11, 9], [13, 7], [13, 8], [16, 10], [17, 10], [16, 3], [17, 3], [18, 3], [16, 5], [17, 5], [18, 5], [16, 6], [17, 6], [18, 6]] },
 ];
 
 const CAMPAIGN_MAPS = MAPS.filter(m => m.type === 'path');
