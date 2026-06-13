@@ -68,6 +68,10 @@ const Sound = {
 // A-minor progression; calm pad+arp normally, drums kick in during waves.
 const Music = {
   on: true, ctx: null, gain: null, timer: null, step: 0, nextT: 0, intensity: 0,
+  // 4-stem adaptive soundtrack; falls back to the procedural chiptune if
+  // the stems fail to fetch/decode.
+  STEMS: ['stem1_pulse', 'stem2_march', 'stem3_valor', 'stem4_chaos'],
+  stemMode: false, stemGains: null, stemLoading: false,
   CHORDS: [[220, 261.63, 329.63], [174.61, 220, 261.63], [196, 246.94, 293.66], [164.81, 196, 261.63]],
   STEP: 0.21,
   start() {
@@ -83,10 +87,55 @@ const Music = {
       this.step = 0;
       this.nextT = this.ctx.currentTime + 0.1;
       this.timer = setInterval(() => this.tick(), 120);
+      this.loadStems();
     } catch (e) { /* no audio available */ }
+  },
+  loadStems() {
+    if (this.stemMode || this.stemLoading) return;
+    this.stemLoading = true;
+    Promise.all(this.STEMS.map(name =>
+      fetch('assets/audio/' + name + '.mp3')
+        .then(r => { if (!r.ok) throw new Error(name); return r.arrayBuffer(); })
+        .then(buf => this.ctx.decodeAudioData(buf))
+    )).then(buffers => {
+      // all four decoded: switch off the chiptune, start stems sample-synced
+      if (this.timer) { clearInterval(this.timer); this.timer = null; }
+      const t0 = this.ctx.currentTime + 0.08;
+      this.stemGains = {};
+      this.STEMS.forEach((name, i) => {
+        const srcNode = this.ctx.createBufferSource();
+        srcNode.buffer = buffers[i];
+        srcNode.loop = true;
+        const g = this.ctx.createGain();
+        g.gain.value = i === 0 ? 0.7 : 0; // build-phase mix until first update
+        srcNode.connect(g);
+        g.connect(this.gain);
+        srcNode.start(t0);
+        this.stemGains[name] = g;
+      });
+      this.stemMode = true;
+    }).catch(() => { this.stemLoading = false; /* keep chiptune */ });
+  },
+  // state: { combat, heroic, chaos } -> Dread Garrison / Tin Sky / Brass Crown / Siege Thunder
+  updateMix(state) {
+    if (!this.stemMode || !this.ctx) return;
+    const t = this.ctx.currentTime;
+    const targets = {
+      stem1_pulse: state.chaos ? 0.1 : 0.7,
+      stem2_march: (state.combat || state.heroic || state.chaos) ? 0.7 : 0,
+      stem3_valor: (state.heroic || state.chaos) ? 0.6 : 0,
+      stem4_chaos: state.chaos ? 0.8 : 0,
+    };
+    for (const name of this.STEMS) {
+      this.stemGains[name].gain.setTargetAtTime(targets[name], t, 0.6);
+    }
   },
   stop() {
     if (this.timer) { clearInterval(this.timer); this.timer = null; }
+    if (this.gain) this.gain.gain.setTargetAtTime(0.0001, this.ctx.currentTime, 0.1);
+  },
+  unmute() {
+    if (this.gain) this.gain.gain.setTargetAtTime(0.5, this.ctx.currentTime, 0.1);
   },
   note(freq, t, dur, type, vol, dest) {
     const o = this.ctx.createOscillator(), g = this.ctx.createGain();
@@ -3056,6 +3105,7 @@ class Game {
     }
     if (!this.lastStandUsed && this.lives > 0 && this.lives <= 3) {
       this.lastStandUsed = true;
+      this.lastStandT = 12;
       this.addFx({ type: 'banner', t: 0, dur: 2.2, str: '\u2694 LAST STAND \u2694', color: '#f87171' });
       this.addFx({ type: 'text', x: COLS * CELL / 2, y: CELL * ROWS * 0.34 + 44, t: 0, dur: 2.6, str: 'All towers overcharged!', color: '#fb923c' });
       for (const t of this.towers) if (t.def.kind !== 'income' && t.def.kind !== 'support') t.overchargeT = Math.max(t.overchargeT, 8);
@@ -3275,6 +3325,7 @@ class Game {
     for (const id in this.cds) this.cds[id] = Math.max(0, this.cds[id] - dt);
     if (this.overclockT > 0) this.overclockT -= dt;
     if (this.shakeT > 0) { this.shakeT -= dt; if (this.shakeT <= 0) this.shakeMag = 0; }
+    if (this.lastStandT > 0) this.lastStandT -= dt;
     for (const hz of this.hazards) if (hz.cd > 0) hz.cd -= dt;
 
     // delayed effects (airstrike impact, ...)

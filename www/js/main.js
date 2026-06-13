@@ -64,6 +64,7 @@ function renderMenu() {
   $('#menu-rp').textContent = `(${SAVE.rp} RP)`;
   $('#menu-ach').textContent = `(${Object.keys(SAVE.ach).length}/${ACHIEVEMENTS.length})`;
   const parts = [`⭐ ${starsTotal()}/${CAMPAIGN_MAPS.length * 9} stars`];
+  if (SAVE.owner) parts.unshift('\ud83d\udc51 Owner');
   if (SAVE.dailyStreak > 1) parts.push(`🔥 ${SAVE.dailyStreak}-day streak`);
   if (SAVE.bestEndless) parts.push(`♾️ best wave ${SAVE.bestEndless}`);
   if (SAVE.bestMaze) parts.push(`🌀 best wave ${SAVE.bestMaze}`);
@@ -84,6 +85,7 @@ document.querySelectorAll('[data-back]').forEach(b => b.addEventListener('click'
 
 // ============ Map select ============
 function mapUnlocked(mode, idx) {
+  if (SAVE.owner) return true;
   if (mode !== 'campaign' || idx === 0) return true;
   const prev = CAMPAIGN_MAPS[idx - 1];
   return DIFFICULTIES.some(d => (SAVE.stars[prev.id + ':' + d.id] || 0) > 0);
@@ -181,7 +183,7 @@ function showMaps(mode) {
       });
       card.appendChild(row);
       // Iron challenge: unlocked after any star on this map
-      if (DIFFICULTIES.some(d => (SAVE.stars[map.id + ':' + d.id] || 0) > 0)) {
+      if (SAVE.owner || DIFFICULTIES.some(d => (SAVE.stars[map.id + ':' + d.id] || 0) > 0)) {
         const ib = document.createElement('button');
         ib.className = 'iron-btn' + (SAVE.ironWins[map.id] ? ' cleared' : '');
         ib.textContent = (SAVE.ironWins[map.id] ? '\ud83d\udee1 IRON CLEARED' : '\u2694 Iron Challenge');
@@ -332,7 +334,7 @@ function renderSettings() {
     b.addEventListener('click', () => {
       SAVE[key] = !SAVE[key];
       if (key === 'sound') Sound.on = SAVE.sound;
-      if (key === 'music') { Music.on = SAVE.music; if (SAVE.music) Music.start(); else Music.stop(); }
+      if (key === 'music') { Music.on = SAVE.music; if (SAVE.music) { Music.start(); Music.unmute(); } else Music.stop(); }
       if (key === 'autoSend' && game) game.autoSend = SAVE.autoSend;
       if (key === 'autoSend') $('#btn-autosend').classList.toggle('on', !!SAVE.autoSend);
       if (game) game.settings = { shake: SAVE.shake, dmgNums: SAVE.dmgNums };
@@ -343,6 +345,46 @@ function renderSettings() {
     row.appendChild(b);
     list.appendChild(row);
   }
+  // owner access: pass phrase unlocks every map + iron challenge for review
+  const orow = document.createElement('div');
+  orow.className = 'setting-row';
+  if (SAVE.owner) {
+    orow.innerHTML = '<span>\ud83d\udc51 Owner mode \u2014 all maps unlocked</span>';
+    const ob = document.createElement('button');
+    ob.className = 'toggle on';
+    ob.textContent = 'ON';
+    ob.addEventListener('click', () => { SAVE.owner = false; saveSave(); renderSettings(); });
+    orow.appendChild(ob);
+  } else {
+    orow.innerHTML = '<span>\ud83d\udc51 Owner access</span>';
+    const wrap = document.createElement('span');
+    const inp = document.createElement('input');
+    inp.type = 'password';
+    inp.placeholder = 'pass phrase';
+    inp.className = 'owner-input';
+    const ob = document.createElement('button');
+    ob.className = 'toggle';
+    ob.textContent = 'UNLOCK';
+    ob.style.width = 'auto';
+    ob.style.padding = '6px 10px';
+    ob.addEventListener('click', () => {
+      if (inp.value.trim().toLowerCase() === 'kingosborne') {
+        SAVE.owner = true;
+        saveSave();
+        toast('\ud83d\udc51 <b>Owner mode unlocked</b> \u2014 every map and Iron Challenge is open');
+        renderSettings();
+      } else {
+        inp.value = '';
+        inp.placeholder = 'wrong pass';
+      }
+    });
+    inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') ob.click(); });
+    wrap.appendChild(inp);
+    wrap.appendChild(ob);
+    orow.appendChild(wrap);
+  }
+  list.appendChild(orow);
+
   const L = SAVE.life || { kills: 0, waves: 0, games: 0, wins: 0 };
   const heroLvls = HERO_ORDER.map(id => (SAVE.heroXp[id] && SAVE.heroXp[id].lvl) || 1).reduce((a, b) => a + b, 0);
   $('#stats-grid').innerHTML = [
@@ -1167,7 +1209,7 @@ $('#btn-sound').addEventListener('click', () => {
 $('#btn-music').addEventListener('click', () => {
   SAVE.music = !SAVE.music;
   Music.on = SAVE.music;
-  if (SAVE.music) Music.start(); else Music.stop();
+  if (SAVE.music) { Music.start(); Music.unmute(); } else Music.stop();
   saveSave();
 });
 $('#btn-quit').addEventListener('click', () => {
@@ -1358,6 +1400,14 @@ function loop(now) {
     acc -= STEP;
   }
   Music.intensity = game.waveActive ? 1 : 0;
+  // adaptive stem mix: build -> combat -> heroic -> chaos
+  let mixHeroic = !!(game.hero && game.hero.alive && game.hero.engaged.length);
+  let mixChaos = game.curses.length > 0 || (game.lastStandT || 0) > 0;
+  for (const e of game.enemies) {
+    if (e.elite) mixHeroic = true;
+    if (e.def.boss) { mixChaos = true; break; }
+  }
+  Music.updateMix({ combat: game.waveActive, heroic: mixHeroic, chaos: mixChaos });
   game.render(ctx);
   refreshHUD();
   refreshInfoPanel();

@@ -681,3 +681,6 @@ body {
 .screen.parch .help-body kbd {
   background: #2e2012; color: #f1e3c3; border: 1px solid #6b5232;
 }
+
+/* owner pass input */
+.owner-input { background: #f7ecd2; border: 1px solid #6b5232; border-radius: 6px; padding: 6px 8px; margin-right: 6px; color: #2e2012; width: 130px; }
