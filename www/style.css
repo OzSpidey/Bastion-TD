@@ -837,19 +837,20 @@ body {
 }
 .splash-hot {
   position: absolute;
-  background: transparent;
-  border: 2px solid transparent;
+  background: transparent !important;
+  border: 2px solid transparent !important;
   border-radius: 12px;
   cursor: pointer;
-  padding: 0;
+  padding: 0 !important;
+  box-shadow: none !important;
+  transform: none !important;
   transition: border-color .12s, box-shadow .12s, background .12s;
 }
 .splash-hot:hover {
-  border-color: rgba(251,221,120,.9);
-  background: rgba(251,221,120,.10);
-  box-shadow: 0 0 18px rgba(251,191,36,.45), inset 0 0 22px rgba(251,191,36,.18);
+  border-color: rgba(251,221,120,.95) !important;
+  background: rgba(251,221,120,.12) !important;
+  box-shadow: 0 0 18px rgba(251,191,36,.5), inset 0 0 22px rgba(251,191,36,.20) !important;
 }
-.splash-hot:active { transform: scale(.98); }
 .splash-num {
   position: absolute; top: 89.5%;
   text-align: center; pointer-events: none;
