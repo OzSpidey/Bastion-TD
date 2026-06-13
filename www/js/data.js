@@ -513,8 +513,11 @@ const MAPS = [
     ] },
   { id: 'openfield', name: 'Open Field', type: 'maze', diffStars: 2, theme: 'grass',
     desc: 'Pure maze-building. Towers block the way.',
-    spawns: [[0, 6]], exit: [19, 6],
-    blocked: [[6, 2], [6, 3], [13, 8], [13, 9], [9, 5], [9, 6]] },
+    // hand-painted battlefield (assets/maps/openfield.jpg): green spawn portal on
+    // the left, purple exit portal on the right; ruins, standing stones and water
+    // pools are blocked so towers route around them.
+    spawns: [[0, 5]], exit: [18, 5],
+    blocked: [[1, 1], [4, 1], [5, 1], [7, 2], [8, 2], [3, 3], [5, 4], [6, 4], [9, 4], [4, 7], [5, 7], [8, 8], [1, 9], [5, 9], [12, 1], [13, 1], [16, 2], [17, 2], [11, 4], [12, 4], [14, 5], [10, 6], [10, 9], [15, 9], [18, 9]] },
   { id: 'twingates', name: 'Twin Gates', type: 'maze', diffStars: 3, theme: 'twilight',
     desc: 'Two spawn gates, one exit. Funnel them together.',
     spawns: [[0, 3], [0, 8]], exit: [19, 6],
