@@ -520,8 +520,11 @@ const MAPS = [
     blocked: [[1, 1], [4, 1], [5, 1], [7, 2], [8, 2], [3, 3], [5, 4], [6, 4], [9, 4], [4, 7], [5, 7], [8, 8], [1, 9], [5, 9], [12, 1], [13, 1], [16, 2], [17, 2], [11, 4], [12, 4], [14, 5], [10, 6], [10, 9], [15, 9], [18, 9]] },
   { id: 'twingates', name: 'Twin Gates', type: 'maze', diffStars: 3, theme: 'twilight',
     desc: 'Two spawn gates, one exit. Funnel them together.',
-    spawns: [[0, 3], [0, 8]], exit: [19, 6],
-    blocked: [[10, 0], [10, 1], [10, 10], [10, 11], [5, 5], [5, 6], [15, 5], [15, 6]] },
+    // hand-painted battlefield (assets/maps/twingates.jpg): two blue spawn gates
+    // on the left, one red exit gate on the right; scattered desert ruins and rock
+    // clusters are blocked.
+    spawns: [[0, 2], [0, 6]], exit: [18, 6],
+    blocked: [[5, 3], [6, 3], [8, 1], [8, 2], [12, 3], [14, 1], [15, 1], [5, 8], [8, 8], [1, 9], [2, 11], [16, 2], [17, 2], [15, 8], [16, 8], [17, 10], [18, 10], [17, 11], [18, 11]] },
   { id: 'oasis', name: 'Sunken Oasis', type: 'path', diffStars: 2, theme: 'oasis',
     desc: 'A winding caravan trail between the dunes and pools.',
     // hand-painted battlefield (assets/maps/oasis.jpg): the caravan road leaves
