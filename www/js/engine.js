@@ -2443,6 +2443,39 @@ class Projectile {
   }
 }
 
+// Carved stone build socket (~30px wide): towers may only stand on these on
+// path maps. subtle=true draws a lighter overlay version for painted maps.
+function drawSocket(x, cx, cy, theme, subtle) {
+  x.save();
+  if (subtle) x.globalAlpha = 0.55;
+  // recess shadow
+  x.fillStyle = 'rgba(0,0,0,0.28)';
+  x.beginPath(); x.ellipse(cx, cy + 2.5, 16, 11.5, 0, 0, Math.PI * 2); x.fill();
+  if (!subtle) {
+    // solid stone platform + packed-dirt center
+    x.fillStyle = theme.rock[1];
+    x.beginPath(); x.ellipse(cx, cy, 15, 10.8, 0, 0, Math.PI * 2); x.fill();
+    x.fillStyle = theme.rock[0];
+    x.beginPath(); x.ellipse(cx, cy - 1, 13.2, 9.4, 0, 0, Math.PI * 2); x.fill();
+    x.fillStyle = 'rgba(62,48,36,0.5)';
+    x.beginPath(); x.ellipse(cx, cy - 0.5, 9.2, 6.2, 0, 0, Math.PI * 2); x.fill();
+  }
+  // carved ring strokes
+  x.strokeStyle = theme.rock[1]; x.lineWidth = 2;
+  x.beginPath(); x.ellipse(cx, cy, 14.5, 10.4, 0, 0, Math.PI * 2); x.stroke();
+  x.strokeStyle = theme.rock[0]; x.lineWidth = 1.3;
+  x.beginPath(); x.ellipse(cx, cy - 1, 11.6, 8.2, 0, 0, Math.PI * 2); x.stroke();
+  x.lineWidth = 1;
+  // four corner studs
+  for (const [sx, sy] of [[-9.5, -5.5], [9.5, -5.5], [-9.5, 5.5], [9.5, 5.5]]) {
+    x.fillStyle = theme.rock[0];
+    x.beginPath(); x.arc(cx + sx, cy + sy, 1.8, 0, Math.PI * 2); x.fill();
+    x.fillStyle = 'rgba(255,255,255,0.3)';
+    x.beginPath(); x.arc(cx + sx - 0.5, cy + sy - 0.6, 0.8, 0, Math.PI * 2); x.fill();
+  }
+  x.restore();
+}
+
 // ============ Game ============
 class Game {
   constructor(opts) {
@@ -2552,6 +2585,16 @@ class Game {
           }
         }
       }
+    }
+    // fixed build sockets (Kingdom Rush style) on path maps; maze maps keep
+    // free placement (towers ARE the maze there). A map def may pin exact
+    // sockets via spots: [[c,r],...] for hand-tuning; otherwise they are
+    // derived deterministically from the road layout.
+    this.buildSpots = null;
+    if (!this.isMaze) {
+      this.buildSpots = this.map.spots
+        ? new Set(this.map.spots.map(([c, r]) => cellKey(c, r)))
+        : this.deriveBuildSpots();
     }
     this.terrain = this.renderTerrain();
 
@@ -2754,11 +2797,58 @@ class Game {
   towerCost(typeId) { return Math.round(TOWERS[typeId].cost * this.costMul); }
   towerBanned(typeId) { return !!(this.bannedTowers && this.bannedTowers.includes(typeId)); }
 
+  // Auto-derive stone build sockets lining the road: every cell touching the
+  // path is a candidate; a seeded shuffle + greedy spacing pass thins them so
+  // they read as deliberate, well-spread platforms. Deterministic per map.
+  deriveBuildSpots() {
+    const cand = [];
+    const seen = new Set();
+    for (const k of this.pathCells) {
+      const [pc, pr] = k.split(',').map(Number);
+      for (let dc = -1; dc <= 1; dc++) {
+        for (let dr = -1; dr <= 1; dr++) {
+          const c = pc + dc, r = pr + dr;
+          if (c < 0 || r < 0 || c >= COLS || r >= ROWS) continue;
+          const ck = cellKey(c, r);
+          if (seen.has(ck)) continue;
+          seen.add(ck);
+          if (this.pathCells.has(ck) || this.blockedSet.has(ck)) continue;
+          cand.push([c, r]);
+        }
+      }
+    }
+    const rng = mulberry32(hashStr('spots:' + this.map.id));
+    for (let i = cand.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      const tmp = cand[i]; cand[i] = cand[j]; cand[j] = tmp;
+    }
+    const CAP = 22, MIN = 14;
+    const spots = [];
+    const minDist = ([c, r]) => {
+      let best = Infinity;
+      for (const [sc, sr] of spots) best = Math.min(best, Math.max(Math.abs(sc - c), Math.abs(sr - r)));
+      return best;
+    };
+    // pass 1: no two sockets touching (chebyshev > 1)
+    for (const p of cand) {
+      if (spots.length >= CAP) break;
+      if (minDist(p) > 1) spots.push(p);
+    }
+    // pass 2: relax to direct neighbors if the road is too short for MIN
+    if (spots.length < MIN) {
+      for (const p of cand) {
+        if (spots.length >= MIN) break;
+        if (minDist(p) > 0) spots.push(p);
+      }
+    }
+    return new Set(spots.map(([c, r]) => cellKey(c, r)));
+  }
+
   canPlace(c, r) {
     if (c < 0 || r < 0 || c >= COLS || r >= ROWS) return false;
     const k = cellKey(c, r);
     if (this.towerGrid.has(k) || this.blockedSet.has(k)) return false;
-    if (!this.isMaze) return !this.pathCells.has(k);
+    if (!this.isMaze) return this.buildSpots.has(k); // sockets only on path maps
     if (c === this.exitCell[0] && r === this.exitCell[1]) return false;
     for (const s of this.map.spawns) if (s[0] === c && s[1] === r) return false;
     // never allow a placement that seals the maze for spawns or live ground enemies
@@ -3113,6 +3203,8 @@ class Game {
       if (!this.place(this.buildType, c, r)) {
         if (this.cash < this.towerCost(this.buildType)) {
           this.addFx({ type: 'text', x: px, y: py, t: 0, dur: 0.8, str: 'Need $' + this.towerCost(this.buildType), color: '#f87171' });
+        } else if (!this.isMaze && this.buildSpots && !this.buildSpots.has(cellKey(c, r))) {
+          this.addFx({ type: 'text', x: px, y: py - 6, t: 0, dur: 0.9, str: 'Build on a stone socket!', color: '#f87171' });
         }
       }
       return;
@@ -3368,6 +3460,14 @@ class Game {
     const painted = Sprites.maps[this.map.id];
     if (painted && painted.complete) {
       x.drawImage(painted, 0, 0, W, H);
+      // subtle stone sockets blended over the hand-painted art
+      if (!this.isMaze && this.buildSpots) {
+        const ptheme = THEMES[this.map.theme] || THEMES.grass;
+        for (const k of this.buildSpots) {
+          const [c, r] = k.split(',').map(Number);
+          drawSocket(x, (c + 0.5) * CELL, (r + 0.5) * CELL, ptheme, true);
+        }
+      }
       this._paintedApplied = true;
       return cv;
     }
@@ -3496,7 +3596,7 @@ class Game {
     const reserved = (c, r) => {
       const k = cellKey(c, r);
       if (this.blockedSet.has(k)) return true;
-      if (!this.isMaze) return this.pathCells.has(k);
+      if (!this.isMaze) return this.pathCells.has(k) || (this.buildSpots && this.buildSpots.has(k));
       if (c === this.exitCell[0] && r === this.exitCell[1]) return true;
       return this.map.spawns.some(s => s[0] === c && s[1] === r);
     };
@@ -3549,6 +3649,14 @@ class Game {
       };
       for (const [c, r] of this.map.spawns) pad((c + 0.5) * CELL, (r + 0.5) * CELL);
       pad(this.exitPx.x, this.exitPx.y);
+    }
+
+    // stone build sockets: carved platforms lining the road (path maps)
+    if (!this.isMaze && this.buildSpots) {
+      for (const k of this.buildSpots) {
+        const [c, r] = k.split(',').map(Number);
+        drawSocket(x, (c + 0.5) * CELL, (r + 0.5) * CELL, theme, false);
+      }
     }
 
     // lighting: soft key light + vignette
@@ -3628,11 +3736,31 @@ class Game {
       }
     }
 
-    // placement grid, only while building
+    // placement aid, only while building
     if (this.buildType && !this.over) {
-      ctx.strokeStyle = 'rgba(255,255,255,0.07)';
-      for (let c = 1; c < COLS; c++) { ctx.beginPath(); ctx.moveTo(c * CELL, 0); ctx.lineTo(c * CELL, H); ctx.stroke(); }
-      for (let r = 1; r < ROWS; r++) { ctx.beginPath(); ctx.moveTo(0, r * CELL); ctx.lineTo(W, r * CELL); ctx.stroke(); }
+      if (this.isMaze) {
+        // maze maps: faint grid — every open tile is buildable and shapes the maze
+        ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+        for (let c = 1; c < COLS; c++) { ctx.beginPath(); ctx.moveTo(c * CELL, 0); ctx.lineTo(c * CELL, H); ctx.stroke(); }
+        for (let r = 1; r < ROWS; r++) { ctx.beginPath(); ctx.moveTo(0, r * CELL); ctx.lineTo(W, r * CELL); ctx.stroke(); }
+      } else if (this.buildSpots) {
+        // path maps: pulse every open stone socket instead of a grid
+        const pa = 0.35 + 0.25 * Math.sin(this.time * 4);
+        for (const k of this.buildSpots) {
+          if (this.towerGrid.has(k)) continue;
+          const [c, r] = k.split(',').map(Number);
+          const sx = (c + 0.5) * CELL, sy = (r + 0.5) * CELL;
+          const gl = ctx.createRadialGradient(sx, sy, 2, sx, sy, 17);
+          gl.addColorStop(0, 'rgba(251,191,36,' + (pa * 0.4).toFixed(3) + ')');
+          gl.addColorStop(1, 'rgba(251,191,36,0)');
+          ctx.fillStyle = gl;
+          ctx.beginPath(); ctx.arc(sx, sy, 17, 0, Math.PI * 2); ctx.fill();
+          ctx.strokeStyle = 'rgba(251,191,36,' + pa.toFixed(3) + ')';
+          ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.arc(sx, sy, 17, 0, Math.PI * 2); ctx.stroke();
+          ctx.lineWidth = 1;
+        }
+      }
     }
 
     // build ghost
@@ -3641,8 +3769,32 @@ class Game {
       if (c >= 0 && r >= 0 && c < COLS && r < ROWS) {
         const ok = this.canPlace(c, r) && this.cash >= this.towerCost(this.buildType);
         const cx = (c + 0.5) * CELL, cy = (r + 0.5) * CELL;
-        ctx.fillStyle = ok ? 'rgba(74,222,128,0.18)' : 'rgba(248,113,113,0.20)';
-        ctx.fillRect(c * CELL, r * CELL, CELL, CELL);
+        const isSpot = this.isMaze || (this.buildSpots && this.buildSpots.has(cellKey(c, r)));
+        if (!isSpot) {
+          // path map, not a socket: dim red ring + small X at the cursor
+          const mx = this.mouse.x, my = this.mouse.y;
+          ctx.strokeStyle = 'rgba(248,113,113,0.30)';
+          ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.arc(mx, my, 12, 0, Math.PI * 2); ctx.stroke();
+          ctx.strokeStyle = 'rgba(248,113,113,0.85)';
+          ctx.beginPath();
+          ctx.moveTo(mx - 5, my - 5); ctx.lineTo(mx + 5, my + 5);
+          ctx.moveTo(mx + 5, my - 5); ctx.lineTo(mx - 5, my + 5);
+          ctx.stroke();
+          ctx.lineWidth = 1;
+        } else {
+          // rounded hover indicator: soft radial glow + ring (gold on sockets)
+          const hcol = !ok ? '248,113,113' : (this.isMaze ? '74,222,128' : '251,191,36');
+          const hg = ctx.createRadialGradient(cx, cy, 2, cx, cy, 16);
+          hg.addColorStop(0, 'rgba(' + hcol + ',0.42)');
+          hg.addColorStop(1, 'rgba(' + hcol + ',0)');
+          ctx.fillStyle = hg;
+          ctx.beginPath(); ctx.arc(cx, cy, 16, 0, Math.PI * 2); ctx.fill();
+          ctx.strokeStyle = 'rgba(' + hcol + ',0.85)';
+          ctx.lineWidth = 2.5;
+          ctx.beginPath(); ctx.arc(cx, cy, 16, 0, Math.PI * 2); ctx.stroke();
+          ctx.lineWidth = 1;
+        }
         // synergy hint: gold pulse on neighbors that would link up
         const hintP = 0.5 + 0.5 * Math.sin(this.time * 6);
         for (const t2 of this.towers) {
@@ -3657,10 +3809,10 @@ class Game {
           ctx.fillText('\ud83d\udd17', t2.x, t2.y - 26);
         }
         const def = TOWERS[this.buildType];
-        if (def.base.range > 0) {
+        if (def.base.range > 0 && isSpot) {
           ctx.beginPath();
           ctx.arc(cx, cy, def.base.range * this.bonuses.rangeMul, 0, Math.PI * 2);
-          ctx.strokeStyle = ok ? 'rgba(74,222,128,0.45)' : 'rgba(248,113,113,0.45)';
+          ctx.strokeStyle = ok ? 'rgba(251,191,36,0.45)' : 'rgba(248,113,113,0.45)';
           ctx.stroke();
         }
       }
