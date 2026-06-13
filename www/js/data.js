@@ -252,7 +252,7 @@ const CURSES = [
 // ============ Map hazards ============
 // Tap-to-trigger environmental strikes ($90, 40s cooldown, big blast).
 const MAP_HAZARDS = {
-  meadow: [[8, 5], [13, 6]],
+  meadow: [[6, 2], [14, 4]],
   riverbend: [[4, 2], [13, 9]],
   switchback: [[9, 4], [9, 7]],
   crossroads: [[10, 4], [15, 6]],
@@ -344,7 +344,32 @@ const ENEMIES = {
 const MAPS = [
   { id: 'meadow', name: 'Green Meadow', type: 'path', diffStars: 1, theme: 'grass',
     desc: 'A gentle S-curve. Learn the ropes.',
-    paths: [[[-1, 6], [3, 6], [3, 2], [8, 2], [8, 9], [13, 9], [13, 4], [20, 4]]] },
+    // hand-painted battlefield (assets/maps/meadow.jpg): cave -> forest dip ->
+    // northern rise -> down the glade -> past the farm -> south to the castle gate.
+    paths: [[[2, 1], [2, 3], [4, 3], [5, 2], [8, 2], [9, 3], [9, 5], [12, 5], [13, 4], [16, 4], [16, 6], [15, 7], [16, 8]]],
+    blocked: [
+      // northern tree line and stone ruins
+      [0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0], [8, 0], [9, 0],
+      [13, 0], [14, 0], [15, 0], [16, 0], [17, 0], [18, 0], [19, 0],
+      [10, 0], [11, 0], [12, 0],
+      [0, 1], [1, 1], [3, 1], [10, 1], [11, 1], [14, 1], [15, 1], [16, 1], [17, 1], [18, 1], [19, 1],
+      // west woods around the cave
+      [0, 2], [1, 2], [3, 2], [12, 2], [0, 3], [0, 4], [1, 4], [2, 4], [8, 4], [0, 5], [1, 5], [3, 5],
+      // east forest edge
+      [17, 2], [18, 2], [19, 2], [17, 3], [18, 3], [19, 3], [17, 4], [18, 4], [19, 4],
+      // center-left woods and old ruins
+      [0, 6], [1, 6], [2, 6], [3, 6], [4, 6], [3, 7], [0, 7], [1, 7], [2, 7], [5, 7],
+      [0, 8], [1, 8], [2, 8], [7, 8],
+      // castle footprint (bottom right)
+      [13, 5], [14, 5], [15, 5],
+      [17, 5], [18, 5], [19, 5], [17, 6], [18, 6], [19, 6],
+      [17, 7], [18, 7], [19, 7], [17, 8], [18, 8], [19, 8],
+      [16, 9], [17, 9], [18, 9], [19, 9],
+      // southern forest
+      [0, 9], [1, 9], [12, 9], [0, 10], [1, 10], [2, 10], [3, 10], [10, 10], [11, 10], [19, 10],
+      [0, 11], [1, 11], [2, 11], [3, 11], [4, 11], [5, 11], [10, 11], [11, 11], [12, 11],
+      [13, 11], [14, 11], [15, 11], [16, 11], [17, 11], [18, 11], [19, 11],
+    ] },
   { id: 'riverbend', name: 'Riverbend', type: 'path', diffStars: 1, theme: 'autumn',
     desc: 'Long straights reward long-range towers.',
     // hand-painted battlefield (assets/maps/riverbend.jpg): the path traces
