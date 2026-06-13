@@ -256,12 +256,12 @@ const MAP_HAZARDS = {
   riverbend: [[4, 2], [13, 9]],
   switchback: [[9, 2], [8, 9]],
   crossroads: [[10, 5], [15, 6]],
-  spiral: [[9, 3], [8, 8]],
+  spiral: [[8, 2], [8, 7]],
   openfield: [[11, 6], [5, 6]],
   twingates: [[8, 5], [12, 6]],
   oasis: [[10, 5], [5, 5]],
-  cinderpeak: [[3, 8], [12, 6]],
-  ashworks: [[10, 5], [4, 8]],
+  cinderpeak: [[10, 5], [8, 8]],
+  ashworks: [[10, 5], [8, 9]],
 };
 
 // ============ Tower synergies ============
@@ -492,25 +492,88 @@ const MAPS = [
     ] },
   { id: 'spiral', name: 'Frozen Spiral', type: 'path', diffStars: 3, theme: 'snow',
     desc: 'A long spiral to a center portal. Hold every ring.',
-    paths: [[[-1, 1], [17, 1], [17, 10], [2, 10], [2, 3], [14, 3], [14, 8], [5, 8], [5, 5], [11, 5]]] },
+    // hand-painted battlefield (assets/maps/spiral.jpg): the road enters from
+    // the cave at the upper-left and spirals clockwise inward along the painted
+    // snow rings to the frozen portal at the centre.
+    paths: [[[-1, 2], [3, 2], [16, 2], [16, 9], [3, 9], [3, 4], [14, 4], [14, 7], [6, 7], [6, 5], [10, 5]]],
+    blocked: [
+      // north mountain ridge / aurora wall
+      [0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0], [8, 0], [9, 0],
+      [10, 0], [11, 0], [12, 0], [13, 0], [14, 0], [15, 0], [16, 0], [17, 0], [18, 0], [19, 0],
+      // west cliff column and the cave shoulder
+      [0, 1], [0, 2], [0, 3], [0, 4], [0, 5], [0, 6], [0, 7], [0, 8], [0, 9], [0, 10], [0, 11],
+      [1, 5], [2, 4],
+      // east cliff column
+      [19, 1], [19, 2], [19, 3], [19, 4], [19, 5], [19, 6], [19, 7], [19, 8], [19, 9], [19, 10], [19, 11],
+      [17, 4], [18, 4], [18, 7],
+      // snow-bank pines flanking the lower rings
+      [1, 9], [2, 9], [8, 9], [9, 9], [12, 9],
+      // bottom forest border
+      [1, 11], [2, 11], [3, 11], [5, 11], [6, 11], [8, 11], [12, 11], [14, 11], [16, 11], [17, 11], [18, 11],
+    ] },
   { id: 'openfield', name: 'Open Field', type: 'maze', diffStars: 2, theme: 'grass',
     desc: 'Pure maze-building. Towers block the way.',
-    spawns: [[0, 6]], exit: [19, 6],
-    blocked: [[6, 2], [6, 3], [13, 8], [13, 9], [9, 5], [9, 6]] },
+    // hand-painted battlefield (assets/maps/openfield.jpg): green spawn portal on
+    // the left, purple exit portal on the right; ruins, standing stones and water
+    // pools are blocked so towers route around them.
+    spawns: [[0, 5]], exit: [18, 5],
+    blocked: [[1, 1], [4, 1], [5, 1], [7, 2], [8, 2], [3, 3], [5, 4], [6, 4], [9, 4], [4, 7], [5, 7], [8, 8], [1, 9], [5, 9], [12, 1], [13, 1], [16, 2], [17, 2], [11, 4], [12, 4], [14, 5], [10, 6], [10, 9], [15, 9], [18, 9]] },
   { id: 'twingates', name: 'Twin Gates', type: 'maze', diffStars: 3, theme: 'twilight',
     desc: 'Two spawn gates, one exit. Funnel them together.',
-    spawns: [[0, 3], [0, 8]], exit: [19, 6],
-    blocked: [[10, 0], [10, 1], [10, 10], [10, 11], [5, 5], [5, 6], [15, 5], [15, 6]] },
+    // hand-painted battlefield (assets/maps/twingates.jpg): two blue spawn gates
+    // on the left, one red exit gate on the right; scattered desert ruins and rock
+    // clusters are blocked.
+    spawns: [[0, 2], [0, 6]], exit: [18, 6],
+    blocked: [[5, 3], [6, 3], [8, 1], [8, 2], [12, 3], [14, 1], [15, 1], [5, 8], [8, 8], [1, 9], [2, 11], [16, 2], [17, 2], [15, 8], [16, 8], [17, 10], [18, 10], [17, 11], [18, 11]] },
   { id: 'oasis', name: 'Sunken Oasis', type: 'path', diffStars: 2, theme: 'oasis',
     desc: 'A winding caravan trail between the dunes and pools.',
-    paths: [[[-1, 3], [5, 3], [5, 8], [10, 8], [10, 2], [15, 2], [15, 6], [20, 6]]] },
+    // hand-painted battlefield (assets/maps/oasis.jpg): the caravan road leaves
+    // the cave at the upper-left, winds across the sandy highway between the palm
+    // groves and water pools, dips through the central village, then climbs to the
+    // desert fortress gate on the right.
+    paths: [[[-1, 2], [2, 2], [2, 5], [5, 5], [6, 4], [9, 4], [10, 5], [10, 7], [13, 7], [14, 6], [14, 5], [17, 5]]],
+    blocked: [
+      [0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0], [8, 0], [9, 0], [10, 0], [11, 0], [12, 0], [13, 0], [14, 0], [15, 0], [16, 0], [17, 0], [18, 0], [19, 0],
+      [0, 1], [1, 1], [2, 1], [10, 1], [11, 1], [12, 1], [19, 1],
+      [8, 2], [10, 2], [11, 2], [12, 2], [19, 2],
+      [1, 3], [4, 3], [5, 3], [6, 3], [7, 3], [13, 3], [19, 3],
+      [13, 4], [16, 4], [17, 4], [18, 4], [19, 4],
+      [18, 5], [19, 5],
+      [3, 6], [7, 6], [16, 6], [17, 6], [18, 6], [19, 6],
+      [0, 7], [1, 7], [2, 7], [3, 7], [4, 7], [8, 7], [16, 7], [17, 7], [18, 7], [19, 7],
+      [0, 8], [1, 8], [2, 8], [3, 8], [4, 8], [19, 8],
+      [0, 9], [1, 9], [2, 9], [3, 9], [4, 9], [6, 9], [7, 9], [9, 9], [10, 9], [11, 9], [12, 9], [13, 9], [15, 9], [19, 9],
+      [9, 10], [10, 10], [11, 10], [12, 10], [13, 10], [19, 10],
+      [0, 11], [1, 11], [2, 11], [9, 11], [10, 11], [11, 11], [12, 11], [13, 11], [15, 11], [16, 11], [17, 11], [18, 11], [19, 11],
+    ] },
   { id: 'cinderpeak', name: 'Cinder Peak', type: 'path', diffStars: 4, theme: 'volcanic',
     desc: 'Molten ground and tight corners. The hardest road.',
-    paths: [[[-1, 10], [3, 10], [3, 5], [7, 5], [7, 9], [12, 9], [12, 4], [16, 4], [16, 8], [20, 8]]] },
+    // hand-painted battlefield (assets/maps/cinderpeak.jpg): the cracked-stone
+    // road enters at the upper-left, runs the top shelf, drops down the right wall
+    // and sweeps back across the middle shelf, then down to the lower shelf and up
+    // to the obsidian fortress gate. Lava cracks and pools are blocked.
+    paths: [[[-1, 1], [15, 1], [16, 2], [16, 4], [15, 5], [3, 5], [2, 6], [2, 8], [13, 8], [14, 7], [14, 6], [16, 6]]],
+    blocked: [
+      [0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0], [8, 0], [9, 0], [10, 0], [11, 0], [12, 0], [13, 0], [14, 0], [15, 0], [16, 0], [17, 0], [18, 0], [19, 0],
+      [17, 1], [18, 1], [19, 1],
+      [0, 2], [1, 2], [18, 2], [19, 2],
+      [0, 3], [1, 3], [2, 3], [5, 3], [6, 3], [7, 3], [8, 3], [9, 3], [10, 3], [11, 3], [12, 3], [18, 3], [19, 3],
+      [0, 4], [1, 4], [2, 4], [15, 4], [17, 4], [18, 4], [19, 4],
+      [0, 5], [16, 5], [17, 5], [18, 5], [19, 5],
+      [0, 6], [17, 6], [18, 6], [19, 6],
+      [0, 7], [5, 7], [6, 7], [7, 7], [8, 7], [9, 7], [10, 7], [11, 7], [15, 7], [16, 7], [17, 7], [18, 7], [19, 7],
+      [0, 8], [19, 8],
+      [0, 9], [1, 9], [4, 9], [5, 9], [6, 9], [15, 9], [16, 9], [17, 9], [19, 9],
+      [0, 10], [1, 10], [2, 10], [9, 10], [10, 10], [11, 10], [19, 10],
+      [0, 11], [1, 11], [2, 11], [3, 11], [4, 11], [5, 11], [6, 11], [7, 11], [8, 11], [9, 11], [10, 11], [11, 11], [12, 11], [13, 11], [14, 11], [15, 11], [16, 11], [17, 11], [18, 11], [19, 11],
+    ] },
   { id: 'ashworks', name: 'The Ashworks', type: 'maze', diffStars: 4, theme: 'volcanic',
     desc: 'Open volcanic field. Forge a maze between the vents.',
-    spawns: [[0, 2], [0, 9]], exit: [19, 5],
-    blocked: [[7, 4], [7, 5], [7, 6], [13, 5], [13, 6], [13, 7], [4, 0], [4, 1], [16, 10], [16, 11]] },
+    // hand-painted battlefield (assets/maps/ashworks.jpg): two lava spawn gates on
+    // the left, the obsidian fortress exit on the right; lava vents, craters and
+    // rock spires are blocked, the fortress gate (row 4) stays open.
+    spawns: [[0, 2], [0, 6]], exit: [18, 4],
+    blocked: [[8, 1], [9, 1], [3, 8], [4, 8], [2, 9], [3, 9], [5, 9], [6, 9], [4, 6], [5, 6], [11, 1], [12, 1], [13, 1], [14, 4], [15, 4], [11, 9], [13, 7], [13, 8], [16, 10], [17, 10], [16, 3], [17, 3], [18, 3], [16, 5], [17, 5], [18, 5], [16, 6], [17, 6], [18, 6]] },
 ];
 
 const CAMPAIGN_MAPS = MAPS.filter(m => m.type === 'path');
