@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#0c1118">
 <meta name="mobile-web-app-capable" content="yes">
 <title>Bastion TD</title>
-<link rel="stylesheet" href="style.css?v=26">
+<link rel="stylesheet" href="style.css?v=27">
 </head>
 <body>
 <canvas id="menu-bg"></canvas>
@@ -37,15 +37,19 @@
   </div>
 
   <!-- ============ MAP SELECT ============ -->
-  <div id="screen-maps" class="screen parch">
-    <div class="screen-head">
-      <button class="flat-btn back-btn" data-back>← Back</button>
-      <h2 id="maps-title">Select Map</h2>
+  <div id="screen-maps" class="screen parch campaign-scene">
+    <div class="camp-panel">
+      <div class="screen-head">
+        <button class="flat-btn back-btn" data-back>← Back</button>
+        <h2 id="maps-title">Select Map</h2>
+      </div>
+      <div id="daily-banner" class="hidden"></div>
+      <div class="camp-top">
+        <div id="hero-strip"></div>
+        <div id="curse-strip"></div>
+      </div>
+      <div id="maps-grid"></div>
     </div>
-    <div id="daily-banner" class="hidden"></div>
-    <div id="hero-strip"></div>
-    <div id="curse-strip"></div>
-    <div id="maps-grid"></div>
   </div>
 
   <!-- ============ RESEARCH ============ -->
@@ -149,8 +153,8 @@
 <div id="tt" class="hidden"></div>
 <div id="toasts"></div>
 
-<script src="js/data.js?v=26"></script>
-<script src="js/engine.js?v=26"></script>
-<script src="js/main.js?v=26"></script>
+<script src="js/data.js?v=27"></script>
+<script src="js/engine.js?v=27"></script>
+<script src="js/main.js?v=27"></script>
 </body>
 </html>

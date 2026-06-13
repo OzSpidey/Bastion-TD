@@ -685,6 +685,142 @@ body {
 /* owner pass input */
 .owner-input { background: #f7ecd2; border: 1px solid #6b5232; border-radius: 6px; padding: 6px 8px; margin-right: 6px; color: #2e2012; width: 130px; }
 
+/* ===== Painted campaign map-select scene ===== */
+/* Full-bleed dusk-castle background; the panel sits on top. */
+#screen-maps.campaign-scene {
+  /* override the parchment container styling — become a full-screen painted stage */
+  max-width: none; margin: -16px; padding: 24px 18px 36px;
+  background: url('assets/ui/mainmenu.jpg?v=2') center/cover no-repeat fixed, #15203a;
+  border: none; outline: none; border-radius: 0;
+  box-shadow: none;
+  min-height: 100vh;
+}
+#screen-maps.campaign-scene .camp-panel {
+  max-width: 1100px; margin: 0 auto; padding: 16px 24px 26px;
+  background: rgba(29, 44, 78, .80);
+  background-image: linear-gradient(180deg, rgba(34,52,92,.82), rgba(18,28,52,.86)),
+                    url('assets/ui/parchment.jpg');
+  background-size: cover, 320px;
+  background-blend-mode: normal, soft-light;
+  border: 4px solid #2a1f14;
+  outline: 2px solid #c9a13f;
+  border-radius: 16px;
+  box-shadow: 0 24px 70px rgba(0,0,0,.75), inset 0 0 90px rgba(8,12,28,.6);
+}
+/* gold title bar + back button */
+#screen-maps.campaign-scene .screen-head { margin: 2px 0 16px; }
+#screen-maps.campaign-scene .screen-head h2 {
+  flex: 1; margin: 0; padding: 9px 18px; text-align: center;
+  background: linear-gradient(180deg, #243a66, #15203a);
+  color: #f3dfae; border: 2px solid #c9a13f; border-radius: 10px;
+  text-shadow: 0 2px 0 #000, 0 0 22px rgba(251,191,36,.35);
+  font-size: 28px; letter-spacing: 2px;
+}
+#screen-maps.campaign-scene .flat-btn {
+  background: linear-gradient(180deg, #c9a13f, #8a5e10);
+  color: #1c1408; border: 2px solid #f3dfae; font-weight: 700;
+  text-shadow: 0 1px 0 rgba(255,255,255,.3);
+}
+#screen-maps.campaign-scene .flat-btn:hover { box-shadow: 0 0 14px rgba(251,191,36,.6); }
+
+/* top row: Your Hero + Curses framed sub-panels */
+#screen-maps.campaign-scene .camp-top {
+  display: grid; grid-template-columns: 2fr 1fr; gap: 14px; margin-bottom: 16px;
+}
+#screen-maps.campaign-scene #hero-strip,
+#screen-maps.campaign-scene #curse-strip {
+  display: block; margin: 0; padding: 0;
+  background: rgba(18,28,52,.55);
+  border: 2px solid #c9a13f; border-radius: 12px; overflow: hidden;
+  box-shadow: inset 0 0 40px rgba(8,12,28,.5);
+}
+#screen-maps.campaign-scene .panel-head {
+  margin: 0; padding: 7px 12px; text-align: center;
+  background: linear-gradient(180deg, #243a66, #15203a);
+  color: #f3dfae; font-size: 16px; letter-spacing: 1px;
+  border-bottom: 2px solid #c9a13f; text-shadow: 0 1px 0 #000;
+}
+#screen-maps.campaign-scene .panel-head small { color: #d7c79a; font-size: 11px; font-weight: 600; }
+#screen-maps.campaign-scene .panel-body {
+  display: flex; flex-wrap: wrap; gap: 8px; padding: 12px;
+}
+#screen-maps.campaign-scene #curse-strip .panel-body { flex-direction: column; gap: 5px; }
+
+/* hero portrait tiles */
+#screen-maps.campaign-scene .hero-chip {
+  background: rgba(247,236,210,.92); border: 2px solid #6b5232; color: #2e2012;
+  border-radius: 9px; min-width: 96px; padding: 8px 10px;
+}
+#screen-maps.campaign-scene .hero-chip:hover { border-color: #f3dfae; }
+#screen-maps.campaign-scene .hero-chip.sel {
+  border-color: #fbbf24; background: #fff7e3;
+  box-shadow: 0 0 14px rgba(251,191,36,.7);
+}
+#screen-maps.campaign-scene .hc-title { color: #5a4426; }
+
+/* curse check-list rows */
+#screen-maps.campaign-scene .curse-chip {
+  display: flex; align-items: center; gap: 7px; width: 100%;
+  text-align: left; padding: 6px 10px; border-radius: 7px;
+  background: rgba(247,236,210,.10); color: #e7dcc2;
+  border: 1px solid #6b5232; font-size: 13px;
+}
+#screen-maps.campaign-scene .curse-chip:hover { border-color: #f3dfae; background: rgba(247,236,210,.18); }
+#screen-maps.campaign-scene .curse-chip .cc-mark { color: #8294ab; font-weight: 800; width: 14px; text-align: center; }
+#screen-maps.campaign-scene .curse-chip.sel {
+  color: #fff7e3; border-color: #fbbf24; background: rgba(251,191,36,.16);
+}
+#screen-maps.campaign-scene .curse-chip.sel .cc-mark { color: #4ade80; }
+
+/* map cards — gold-framed on the navy panel */
+#screen-maps.campaign-scene #maps-grid {
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+}
+#screen-maps.campaign-scene .map-card {
+  background: rgba(247,236,210,.94);
+  border: 3px solid #c9a13f; border-radius: 12px; color: #2e2012;
+  box-shadow: 0 6px 18px rgba(0,0,0,.45);
+}
+#screen-maps.campaign-scene .map-card.locked { opacity: .5; }
+#screen-maps.campaign-scene .map-card h3 { color: #2e2012; }
+#screen-maps.campaign-scene .map-card h3 small { color: #8a5e10 !important; }
+#screen-maps.campaign-scene .map-best { color: #5a4426; }
+#screen-maps.campaign-scene .map-stars { color: #8a5e10; font-weight: 600; }
+#screen-maps.campaign-scene .map-art { border: 2px solid #6b5232; }
+
+/* gold banner difficulty + iron buttons */
+#screen-maps.campaign-scene .map-diffs button,
+#screen-maps.campaign-scene .map-play {
+  background: linear-gradient(180deg, #f3dfae, #c9a13f);
+  border: 2px solid #8a5e10; color: #1c1408;
+  font-weight: 700; border-radius: 7px; letter-spacing: .5px;
+  transition: transform .12s, box-shadow .12s, border-color .12s;
+}
+#screen-maps.campaign-scene .map-diffs button:hover,
+#screen-maps.campaign-scene .map-play:hover {
+  border-color: #fbbf24; color: #1c1408;
+  transform: translateY(-1px); box-shadow: 0 4px 12px rgba(251,191,36,.5);
+}
+#screen-maps.campaign-scene .iron-btn {
+  background: linear-gradient(180deg, #3a3026, #261f17);
+  color: #f3dfae; border: 2px solid #c9a13f; border-radius: 7px;
+}
+#screen-maps.campaign-scene .iron-btn:hover { box-shadow: 0 0 12px rgba(251,191,36,.5); }
+#screen-maps.campaign-scene .iron-btn.cleared { color: #fbbf24; border-color: #fbbf24; }
+
+/* endless leaderboard banner on the scene */
+#screen-maps.campaign-scene #daily-banner {
+  background: rgba(18,28,52,.6); border: 2px solid #c9a13f; color: #f3dfae;
+}
+#screen-maps.campaign-scene #daily-banner .lb-head { color: #fbbf24; }
+#screen-maps.campaign-scene #daily-banner .lb-row,
+#screen-maps.campaign-scene #daily-banner .lb-rank,
+#screen-maps.campaign-scene #daily-banner .lb-date { color: #e7dcc2; }
+
+@media (max-width: 760px) {
+  #screen-maps.campaign-scene .camp-top { grid-template-columns: 1fr; }
+}
+
 /* ===== Splash main menu (painted art + hotspots) ===== */
 #screen-menu.active {
   display: flex; align-items: center; justify-content: center;

@@ -212,7 +212,8 @@ function showMaps(mode) {
 // ============ Hero select ============
 function renderHeroStrip() {
   const strip = $('#hero-strip');
-  strip.innerHTML = '<span class="hs-label">Your hero:</span>';
+  strip.innerHTML = '<h3 class="panel-head">Your Hero</h3><div class="panel-body"></div>';
+  const body = strip.querySelector('.panel-body');
   for (const id of HERO_ORDER) {
     const h = HEROES[id];
     const b = document.createElement('button');
@@ -226,7 +227,7 @@ function renderHeroStrip() {
       saveSave();
       renderHeroStrip();
     });
-    strip.appendChild(b);
+    body.appendChild(b);
   }
 }
 
@@ -234,19 +235,20 @@ function renderHeroStrip() {
 let selectedCurses = [];
 function renderCurseStrip() {
   const strip = $('#curse-strip');
-  strip.innerHTML = '<span class="hs-label">\u2620 Curses (optional, +25% RP each):</span>';
+  strip.innerHTML = '<h3 class="panel-head">Curses <small>(Optional Modifiers, +25% RP each)</small></h3><div class="panel-body"></div>';
+  const body = strip.querySelector('.panel-body');
   for (const c of CURSES) {
     const b = document.createElement('button');
     const on = selectedCurses.includes(c.id);
     b.className = 'curse-chip' + (on ? ' sel' : '');
-    b.innerHTML = `${c.icon} ${c.name}`;
+    b.innerHTML = `<span class="cc-mark">${on ? '\u2713' : '\u2717'}</span><span class="cc-ico">${c.icon}</span> ${c.name}`;
     b.title = c.desc;
     b.addEventListener('click', () => {
       if (on) selectedCurses = selectedCurses.filter(x => x !== c.id);
       else if (selectedCurses.length < 3) selectedCurses.push(c.id);
       renderCurseStrip();
     });
-    strip.appendChild(b);
+    body.appendChild(b);
   }
 }
 
