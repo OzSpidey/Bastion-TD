@@ -821,64 +821,83 @@ body {
   #screen-maps.campaign-scene .camp-top { grid-template-columns: 1fr; }
 }
 
-/* ===== Splash main menu (painted art + hotspots) ===== */
+/* ===== Main menu — REAL CSS cards (no overlay hotspots) =====
+   Every card/button is a genuine DOM element laid out by the browser,
+   so the clickable area always matches what you see. The painted scene
+   is just a backdrop; the panel + cards are built in CSS. */
 #screen-menu.active {
   display: flex; align-items: center; justify-content: center;
-  min-height: 100vh; margin: -16px; padding: 0;
+  min-height: 100vh; max-height: 100vh; overflow-y: auto;
+  margin: -16px; padding: 12px;
+  background: url('assets/ui/menubg.jpg?v=1') center/cover no-repeat fixed, #0d1420;
 }
-.menu-splash {
-  position: relative;
-  width: min(100%, calc((100vh - 8px) * 1376 / 768));
-  border-radius: 6px;
-  box-shadow: 0 0 60px rgba(0,0,0,.6);
-  overflow: hidden;
-  line-height: 0;
+.m2-wrap {
+  width: 100%; max-width: 920px;
+  display: flex; flex-direction: column; align-items: center;
 }
-/* the art is a real img so % hotspots map 1:1 to image pixels (no cover crop) */
-.splash-img { display: block; width: 100%; height: auto; }
-.splash-hot {
-  position: absolute;
-  background: transparent !important;
-  border: 2px solid transparent !important;
-  border-radius: 12px;
-  cursor: pointer;
-  padding: 0 !important;
-  box-shadow: none !important;
-  transform: none !important;
-  transition: border-color .12s, box-shadow .12s, background .12s;
+.m2-title {
+  font-size: clamp(34px, 6vw, 64px); letter-spacing: 6px; margin: 0;
+  color: #f3dfae; font-weight: 800;
+  text-shadow: 0 3px 0 #2a1a08, 0 0 26px rgba(251,191,36,.45);
 }
-.splash-hot:hover {
-  border-color: rgba(251,221,120,.95) !important;
-  background: rgba(251,221,120,.12) !important;
-  box-shadow: 0 0 18px rgba(251,191,36,.5), inset 0 0 22px rgba(251,191,36,.20) !important;
+.m2-title span { color: #fbbf24; }
+.m2-sub { color: #e8dcc0; margin: 2px 0 14px; text-shadow: 0 1px 4px #000; font-weight: 600; }
+.m2-panel {
+  width: 100%;
+  background: linear-gradient(160deg, #6b4a2c, #4a3019);
+  border: 3px solid #caa14a;
+  border-radius: 16px;
+  box-shadow: 0 14px 50px rgba(0,0,0,.6), inset 0 0 40px rgba(0,0,0,.35);
+  padding: 18px;
 }
-.splash-num {
-  position: absolute; top: 89.5%;
-  text-align: center; pointer-events: none;
-  color: #fde9a8; font-weight: 800; font-size: clamp(8px, 1vw, 13px);
-  text-shadow: 0 1px 2px #000;
+.m2-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
 }
-.splash-num::before {
-  content: ''; position: absolute; inset: -2px 22% -2px 22%;
-  background: rgba(20,14,8,.78); border-radius: 6px; z-index: -1;
+.m2-card {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 10px 8px 12px; cursor: pointer;
+  background: linear-gradient(160deg, #2c4a63, #1d3047) !important;
+  border: 2px solid #caa14a; border-radius: 11px; color: #f3dfae;
+  transition: transform .12s, box-shadow .12s, border-color .12s;
 }
-.splash-quests {
-  position: absolute; left: 1.5%; bottom: 2%;
-  width: 17%; min-width: 150px; max-height: 30%; overflow: hidden;
-  background: rgba(12,17,28,.62); border: 1px solid rgba(201,161,63,.4);
-  border-radius: 8px; padding: 6px 8px; backdrop-filter: blur(2px);
-  font-size: 11px;
+.m2-card img {
+  width: 100%; height: clamp(58px, 9vh, 86px); object-fit: cover;
+  border-radius: 7px; border: 1px solid rgba(0,0,0,.35); margin-bottom: 4px;
 }
-.splash-quests h4 { color: #c9a13f; font-size: 11px; margin-bottom: 4px; text-align: center; }
-.splash-quests .quest { background: rgba(0,0,0,.25); border-color: rgba(201,161,63,.25); color: #e8dcc0; margin-bottom: 4px; padding: 5px 8px 9px; }
-.splash-quests .quest .q-prog { color: #fbbf24; }
-.splash-foot {
-  position: absolute; bottom: 0.4%; left: 0; right: 0;
-  text-align: center; color: rgba(245,230,200,.7) !important;
-  font-size: clamp(9px, 1vw, 13px); text-shadow: 0 1px 3px #000; pointer-events: none;
+.m2-card .m2-name { font-size: clamp(13px, 1.7vw, 18px); font-weight: 800; letter-spacing: .5px; }
+.m2-card .m2-desc { font-size: clamp(9px, 1.1vw, 12px); color: #cdb98f; }
+.m2-card:hover {
+  transform: translateY(-4px);
+  border-color: #ffe07a;
+  box-shadow: 0 10px 26px rgba(0,0,0,.5), 0 0 20px rgba(251,191,36,.45);
 }
-@media (max-width: 700px) {
-  .splash-quests { display: none; }
+.m2-card:active { transform: translateY(-1px) scale(.99); }
+.m2-heroes {
+  display: flex; justify-content: center; gap: 4px; margin-top: 14px;
+  border-top: 1px solid rgba(202,161,74,.4); padding-top: 10px;
+}
+.m2-heroes img {
+  width: clamp(42px, 6vw, 64px); height: clamp(42px, 6vw, 64px); object-fit: contain;
+  filter: drop-shadow(0 3px 3px rgba(0,0,0,.5)); transition: transform .12s;
+}
+.m2-heroes img:hover { transform: translateY(-5px) scale(1.12); }
+.m2-bottom {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 16px;
+}
+.m2-btn {
+  background: linear-gradient(180deg, #1d2c4e, #15203a) !important;
+  color: #f3dfae !important; border: 2px solid #caa14a !important;
+  border-radius: 10px; padding: 10px 18px; font-weight: 700; cursor: pointer;
+  transition: transform .12s, box-shadow .12s, border-color .12s;
+}
+.m2-btn b { color: #fbbf24; font-weight: 800; }
+.m2-btn:hover { transform: translateY(-2px); border-color: #ffe07a !important; box-shadow: 0 0 14px rgba(251,191,36,.4); }
+#screen-menu #menu-quests { width: 100%; max-width: 460px; margin: 14px auto 0; }
+#screen-menu #menu-quests h4 { color: #f3dfae; text-shadow: 0 1px 3px #000; }
+#screen-menu .footnote { color: #e8dcc0; text-shadow: 0 1px 3px #000; margin-top: 8px; }
+@media (max-width: 620px) {
+  .m2-grid { grid-template-columns: repeat(2, 1fr); }
+  .m2-card img { height: 64px; }
 }
 
 
