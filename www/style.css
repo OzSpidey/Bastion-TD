@@ -742,3 +742,152 @@ body {
 @media (max-width: 700px) {
   .splash-quests { display: none; }
 }
+
+
+/* ============================================================
+   ROYAL GOLD-FRAMED IN-GAME HUD  (v26)
+   Appended LAST so these rules override the earlier defaults.
+   Scope: ONLY #screen-game (topbar, sidebar panels, build/ability
+   cards, battlefield frame). Menu/parchment screens untouched.
+   Palette: navy #15203a/#1d2c4e + gold #c9a13f/#f3dfae/#fbbf24.
+   Functional styles (cd sweeps, countdowns, hurt flash, armed,
+   selected, poor, banned, hero cast, overcharge) are preserved.
+   ============================================================ */
+
+/* --- Topbar: navy gradient with gold bottom rail --- */
+#screen-game #topbar {
+  background: linear-gradient(180deg, #1d2c4e, #15203a);
+  border: 1px solid rgba(201,161,63,.35);
+  border-bottom: 2px solid #c9a13f;
+  border-radius: 10px;
+  color: #f3dfae;
+  box-shadow: 0 3px 10px rgba(0,0,0,.45), inset 0 1px 0 rgba(243,223,174,.12);
+}
+
+/* --- Stat chips (lives / cash / wave): dark gold-rimmed pills --- */
+#screen-game #topbar .stat {
+  background: rgba(12,17,28,.6);
+  border: 1px solid rgba(201,161,63,.5);
+  border-radius: 999px;
+  padding: 4px 12px;
+  color: #f3dfae;
+  text-shadow: 0 1px 2px rgba(0,0,0,.6);
+}
+/* keep the hurt flash animation intact (do not set color here) */
+
+/* --- HUD buttons + send button: navy/gold --- */
+#screen-game .hud-btn,
+#screen-game .send-btn {
+  background: linear-gradient(180deg, #25365c, #18233e);
+  border: 1px solid rgba(201,161,63,.55);
+  color: #f3dfae;
+  text-shadow: 0 1px 2px rgba(0,0,0,.6);
+  transition: border-color .12s ease, transform .1s ease, box-shadow .12s ease, color .12s ease;
+}
+#screen-game .hud-btn:hover,
+#screen-game .send-btn:hover:not(:disabled) {
+  border-color: #c9a13f;
+  color: #fbe6b0;
+  box-shadow: 0 0 9px rgba(201,161,63,.4);
+  transform: translateY(-1px);
+}
+/* Send-wave reads as the primary action: a touch brighter */
+#screen-game .send-btn {
+  background: linear-gradient(180deg, #2c3f6b, #1b2747);
+  border-color: rgba(201,161,63,.7);
+  color: #fbbf24;
+}
+#screen-game .send-btn:disabled { opacity: .35; cursor: default; }
+/* preserve toggle states */
+#screen-game #btn-autosend.on {
+  background: linear-gradient(180deg, #4a3a14, #2f2510);
+  border-color: #c9a13f;
+  color: #fbbf24;
+}
+#screen-game .hud-btn.off { opacity: .35; }
+
+/* --- Sidebar panels: navy gradient cards with gold rim --- */
+#screen-game #build-bar,
+#screen-game #info-panel,
+#screen-game #abilities-bar {
+  background: linear-gradient(160deg, #1b2533, #141c27);
+  border: 1px solid rgba(201,161,63,.4);
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.4), inset 0 1px 0 rgba(243,223,174,.06);
+}
+#screen-game #build-bar { padding: 8px; }
+#screen-game #abilities-bar { padding: 8px; }
+
+/* --- Build-btn tower cards: gold-framed navy cards --- */
+#screen-game .build-btn {
+  background: linear-gradient(160deg, #1d2c4e, #15203a);
+  border: 1px solid rgba(201,161,63,.45);
+  border-radius: 9px;
+  color: #f3dfae;
+  transition: border-color .12s ease, transform .1s ease, box-shadow .12s ease;
+}
+#screen-game .build-btn .b-name { color: #cdbb8e; }
+#screen-game .build-btn .b-cost { color: #fbbf24; }
+#screen-game .build-btn:hover {
+  border-color: #c9a13f;
+  box-shadow: 0 0 12px rgba(201,161,63,.45);
+  transform: translateY(-2px);
+}
+#screen-game .build-btn.selected {
+  border: 2px solid #fbbf24;
+  background: linear-gradient(160deg, #243763, #182447);
+  box-shadow: 0 0 14px rgba(251,191,36,.55);
+}
+/* preserve affordability / ban states */
+#screen-game .build-btn.poor { opacity: .45; }
+#screen-game .build-btn.banned { opacity: .25; pointer-events: none; filter: grayscale(1); }
+
+/* --- Ability buttons: same gold/navy card family --- */
+#screen-game .ability-btn {
+  background: linear-gradient(160deg, #1d2c4e, #15203a);
+  border: 1px solid rgba(201,161,63,.45);
+  border-radius: 9px;
+  color: #f3dfae;
+  transition: border-color .12s ease, box-shadow .12s ease;
+}
+#screen-game .ability-btn .a-name { color: #cdbb8e; }
+#screen-game .ability-btn:hover:not(:disabled) {
+  border-color: #c9a13f;
+  box-shadow: 0 0 10px rgba(201,161,63,.4);
+}
+/* armed highlight stays gold-on-warm; cd-fill sweep + cd-num unchanged */
+#screen-game .ability-btn.armed {
+  border-color: #fbbf24;
+  background: linear-gradient(160deg, #3a2f12, #241c0c);
+  box-shadow: 0 0 12px rgba(251,191,36,.5);
+}
+
+/* --- Info panel: keep all text light/gold on navy --- */
+#screen-game #info-panel { color: #dbe6f3; padding: 12px; }
+#screen-game #info-panel h3 { color: #f3dfae; }
+#screen-game #info-panel .tstats { color: #b9c6d8; }
+#screen-game #info-panel .upg-path .path-name { color: #b9c6d8; }
+#screen-game #info-panel .upg-btn {
+  background: linear-gradient(180deg, #25365c, #18233e);
+  border: 1px solid rgba(201,161,63,.45);
+  color: #e7eef8;
+}
+#screen-game #info-panel .upg-btn:hover:not(:disabled) { border-color: #c9a13f; }
+#screen-game #info-panel .upg-btn .u-cost { color: #fbbf24; }
+#screen-game #info-panel .upg-btn.maxed { border-color: #c9a13f; color: #fbbf24; }
+#screen-game #info-panel .info-row button {
+  background: linear-gradient(180deg, #25365c, #18233e);
+  border: 1px solid rgba(201,161,63,.45);
+  color: #e7eef8;
+}
+#screen-game #info-panel .info-row .sell-btn { border-color: #7f1d1d; color: var(--red); }
+/* hero cast + overcharge buttons (use .upg-btn family) inherit the above */
+#screen-game #info-panel #btn-herocast { color: #fbe6b0; }
+#screen-game #info-panel #btn-overcharge { color: #fbe6b0; }
+
+/* --- Battlefield frame: dark wood edge + inner gold line --- */
+#screen-game #canvas {
+  border: 3px solid #2a1f14;
+  border-radius: 4px;
+  box-shadow: 0 0 0 1px rgba(201,161,63,.6), 0 6px 18px rgba(0,0,0,.55);
+}
