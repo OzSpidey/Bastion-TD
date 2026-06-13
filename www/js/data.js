@@ -255,7 +255,7 @@ const MAP_HAZARDS = {
   meadow: [[6, 2], [14, 4]],
   riverbend: [[4, 2], [13, 9]],
   switchback: [[9, 2], [8, 9]],
-  crossroads: [[10, 4], [15, 6]],
+  crossroads: [[10, 5], [15, 6]],
   spiral: [[9, 3], [8, 8]],
   openfield: [[11, 6], [5, 6]],
   twingates: [[8, 5], [12, 6]],
@@ -443,9 +443,40 @@ const MAPS = [
     ] },
   { id: 'crossroads', name: 'Crossroads', type: 'path', diffStars: 3, theme: 'autumn',
     desc: 'Two lanes merge into one. Split your defense.',
+    // hand-painted battlefield (assets/maps/crossroads.jpg): two cave roads
+    // enter from the left, merge on the central plaza by the wayside cross,
+    // then one road runs east to the castle gate.
     paths: [
-      [[-1, 2], [10, 2], [10, 6], [20, 6]],
-      [[-1, 9], [10, 9], [10, 6], [20, 6]],
+      [[1, 2], [2, 3], [3, 4], [7, 4], [8, 5], [13, 5], [14, 6], [17, 6]],
+      [[1, 5], [2, 6], [7, 6], [8, 5], [13, 5], [14, 6], [17, 6]],
+    ],
+    blocked: [
+      // northern tree line and the top-road homestead
+      [0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0], [8, 0], [9, 0],
+      [10, 0], [11, 0], [12, 0], [13, 0], [14, 0], [15, 0], [16, 0], [17, 0], [18, 0], [19, 0],
+      // west edge: rocks and both cave structures
+      [0, 1], [0, 2], [0, 3], [0, 4], [0, 5], [0, 6], [0, 7], [0, 8], [0, 9], [0, 10],
+      [1, 1], [2, 1], [2, 2], [1, 3], [1, 4],
+      // east edge forest
+      [19, 1], [19, 2], [19, 3], [19, 8], [19, 9], [19, 10],
+      // fenced gardens between the upper road and the top
+      [3, 3], [4, 2], [5, 2], [6, 2], [4, 3], [5, 3], [6, 3],
+      // ruined watchtower between the two west lanes
+      [4, 5], [5, 5],
+      // central plaza dirt and the north/south branch roads (keep sockets off)
+      [9, 4], [10, 4], [7, 5], [8, 6], [9, 6], [10, 6],
+      // lower-left fenced pen
+      [2, 7], [3, 7], [4, 7],
+      // southern village
+      [5, 8], [6, 8], [7, 8], [8, 8], [6, 9], [7, 9], [8, 9],
+      // lower-right farm fields
+      [12, 7], [13, 7], [14, 7], [15, 7], [12, 8], [13, 8], [14, 8], [15, 8],
+      // castle footprint
+      [16, 4], [17, 4], [18, 4], [19, 4], [16, 5], [17, 5], [18, 5], [19, 5],
+      [18, 6], [19, 6], [16, 7], [17, 7], [18, 7], [19, 7],
+      // southern tree line
+      [0, 11], [1, 11], [2, 11], [3, 11], [4, 11], [5, 11], [6, 11], [7, 11], [8, 11], [9, 11],
+      [10, 11], [11, 11], [12, 11], [13, 11], [14, 11], [15, 11], [16, 11], [17, 11], [18, 11], [19, 11],
     ] },
   { id: 'spiral', name: 'Frozen Spiral', type: 'path', diffStars: 3, theme: 'snow',
     desc: 'A long spiral to a center portal. Hold every ring.',
