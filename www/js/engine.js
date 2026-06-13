@@ -2621,16 +2621,20 @@ class Game {
         this.pathCum.push(cum);
         this.pathLens.push(cum[cum.length - 1]);
       }
+      // Mark every cell the road passes through by sampling finely along the
+      // pixel polyline. Works for ANY segment angle (curvy roads are fine),
+      // unlike the old axis/45-only sign-step walk.
       this.pathCells = new Set();
-      for (const wps of this.map.paths) {
-        for (let i = 1; i < wps.length; i++) {
-          const [c1, r1] = wps[i - 1], [c2, r2] = wps[i];
-          const dc = Math.sign(c2 - c1), dr = Math.sign(r2 - r1);
-          let c = c1, r = r1;
-          while (true) {
+      for (const pts of this.pathsPx) {
+        for (let i = 1; i < pts.length; i++) {
+          const [x1, y1] = pts[i - 1], [x2, y2] = pts[i];
+          const segLen = Math.hypot(x2 - x1, y2 - y1);
+          const steps = Math.max(1, Math.ceil(segLen / (CELL * 0.25)));
+          for (let s = 0; s <= steps; s++) {
+            const t = s / steps;
+            const c = Math.floor((x1 + (x2 - x1) * t) / CELL);
+            const r = Math.floor((y1 + (y2 - y1) * t) / CELL);
             if (c >= 0 && r >= 0 && c < COLS && r < ROWS) this.pathCells.add(cellKey(c, r));
-            if (c === c2 && r === r2) break;
-            c += dc; r += dr;
           }
         }
       }
