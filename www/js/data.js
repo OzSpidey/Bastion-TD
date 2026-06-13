@@ -256,7 +256,7 @@ const MAP_HAZARDS = {
   riverbend: [[4, 2], [13, 9]],
   switchback: [[9, 2], [8, 9]],
   crossroads: [[10, 5], [15, 6]],
-  spiral: [[9, 3], [8, 8]],
+  spiral: [[8, 2], [8, 7]],
   openfield: [[11, 6], [5, 6]],
   twingates: [[8, 5], [12, 6]],
   oasis: [[10, 5], [5, 5]],
@@ -492,7 +492,25 @@ const MAPS = [
     ] },
   { id: 'spiral', name: 'Frozen Spiral', type: 'path', diffStars: 3, theme: 'snow',
     desc: 'A long spiral to a center portal. Hold every ring.',
-    paths: [[[-1, 1], [17, 1], [17, 10], [2, 10], [2, 3], [14, 3], [14, 8], [5, 8], [5, 5], [11, 5]]] },
+    // hand-painted battlefield (assets/maps/spiral.jpg): the road enters from
+    // the cave at the upper-left and spirals clockwise inward along the painted
+    // snow rings to the frozen portal at the centre.
+    paths: [[[-1, 2], [3, 2], [16, 2], [16, 9], [3, 9], [3, 4], [14, 4], [14, 7], [6, 7], [6, 5], [10, 5]]],
+    blocked: [
+      // north mountain ridge / aurora wall
+      [0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0], [8, 0], [9, 0],
+      [10, 0], [11, 0], [12, 0], [13, 0], [14, 0], [15, 0], [16, 0], [17, 0], [18, 0], [19, 0],
+      // west cliff column and the cave shoulder
+      [0, 1], [0, 2], [0, 3], [0, 4], [0, 5], [0, 6], [0, 7], [0, 8], [0, 9], [0, 10], [0, 11],
+      [1, 5], [2, 4],
+      // east cliff column
+      [19, 1], [19, 2], [19, 3], [19, 4], [19, 5], [19, 6], [19, 7], [19, 8], [19, 9], [19, 10], [19, 11],
+      [17, 4], [18, 4], [18, 7],
+      // snow-bank pines flanking the lower rings
+      [1, 9], [2, 9], [8, 9], [9, 9], [12, 9],
+      // bottom forest border
+      [1, 11], [2, 11], [3, 11], [5, 11], [6, 11], [8, 11], [12, 11], [14, 11], [16, 11], [17, 11], [18, 11],
+    ] },
   { id: 'openfield', name: 'Open Field', type: 'maze', diffStars: 2, theme: 'grass',
     desc: 'Pure maze-building. Towers block the way.',
     spawns: [[0, 6]], exit: [19, 6],
