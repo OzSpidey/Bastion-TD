@@ -684,3 +684,61 @@ body {
 
 /* owner pass input */
 .owner-input { background: #f7ecd2; border: 1px solid #6b5232; border-radius: 6px; padding: 6px 8px; margin-right: 6px; color: #2e2012; width: 130px; }
+
+/* ===== Splash main menu (painted art + hotspots) ===== */
+#screen-menu.active {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 100vh; margin: -16px; padding: 0;
+}
+.menu-splash {
+  position: relative;
+  width: min(100%, calc((100vh - 8px) * 1376 / 768));
+  aspect-ratio: 1376 / 768;
+  background: url('assets/ui/mainmenu.jpg') center/cover no-repeat;
+  border-radius: 6px;
+  box-shadow: 0 0 60px rgba(0,0,0,.6);
+  overflow: hidden;
+}
+.splash-hot {
+  position: absolute;
+  background: transparent;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  cursor: pointer;
+  padding: 0;
+  transition: border-color .12s, box-shadow .12s, background .12s;
+}
+.splash-hot:hover {
+  border-color: rgba(251,221,120,.9);
+  background: rgba(251,221,120,.10);
+  box-shadow: 0 0 18px rgba(251,191,36,.45), inset 0 0 22px rgba(251,191,36,.18);
+}
+.splash-hot:active { transform: scale(.98); }
+.splash-num {
+  position: absolute; top: 89.5%;
+  text-align: center; pointer-events: none;
+  color: #fde9a8; font-weight: 800; font-size: clamp(8px, 1vw, 13px);
+  text-shadow: 0 1px 2px #000;
+}
+.splash-num::before {
+  content: ''; position: absolute; inset: -2px 22% -2px 22%;
+  background: rgba(20,14,8,.78); border-radius: 6px; z-index: -1;
+}
+.splash-quests {
+  position: absolute; left: 1.5%; bottom: 2%;
+  width: 17%; min-width: 150px; max-height: 30%; overflow: hidden;
+  background: rgba(12,17,28,.62); border: 1px solid rgba(201,161,63,.4);
+  border-radius: 8px; padding: 6px 8px; backdrop-filter: blur(2px);
+  font-size: 11px;
+}
+.splash-quests h4 { color: #c9a13f; font-size: 11px; margin-bottom: 4px; text-align: center; }
+.splash-quests .quest { background: rgba(0,0,0,.25); border-color: rgba(201,161,63,.25); color: #e8dcc0; margin-bottom: 4px; padding: 5px 8px 9px; }
+.splash-quests .quest .q-prog { color: #fbbf24; }
+.splash-foot {
+  position: absolute; bottom: 0.4%; left: 0; right: 0;
+  text-align: center; color: rgba(245,230,200,.7) !important;
+  font-size: clamp(9px, 1vw, 13px); text-shadow: 0 1px 3px #000; pointer-events: none;
+}
+@media (max-width: 700px) {
+  .splash-quests { display: none; }
+}

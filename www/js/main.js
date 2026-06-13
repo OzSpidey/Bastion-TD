@@ -61,8 +61,8 @@ function unlock(id) {
 // ============ Menu ============
 function renderMenu() {
   renderQuests();
-  $('#menu-rp').textContent = `(${SAVE.rp} RP)`;
-  $('#menu-ach').textContent = `(${Object.keys(SAVE.ach).length}/${ACHIEVEMENTS.length})`;
+  $('#menu-rp').textContent = `${SAVE.rp} RP`;
+  $('#menu-ach').textContent = `${Object.keys(SAVE.ach).length}/${ACHIEVEMENTS.length}`;
   const parts = [`⭐ ${starsTotal()}/${CAMPAIGN_MAPS.length * 9} stars`];
   if (SAVE.owner) parts.unshift('\ud83d\udc51 Owner');
   if (SAVE.dailyStreak > 1) parts.push(`🔥 ${SAVE.dailyStreak}-day streak`);
